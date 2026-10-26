@@ -1,9 +1,17 @@
 // echo Worker: serves the static site (Workers Static Assets) and proxies
 // /api/chat to Reflection Beam. The provider key lives ONLY in the
 // REFLECTION_API_KEY Worker secret — never in the repo or frontend.
+//
+// Daily credit quota: every user (wallet address via x-echo-wallet header,
+// otherwise SHA-256 of IP) gets 2 credits/day where 1 credit = 1,000,000
+// tokens. Usage per UTC day is tracked in the CREDITS KV namespace;
+// keys are auto-expiring (2-day TTL) so the quota resets daily and old
+// keys clean up themselves.
 const UPSTREAM = "https://api.reflection.ai/openai/v1/chat/completions";
 const MODEL = "Beam-1.0-501B-A23B";
 const SYSTEM_PROMPT = "You are echo, a helpful AI assistant.";
+const TOKENS_PER_CREDIT = 1_000_000;
+const DAILY_CREDIT_LIMIT = 2 * TOKENS_PER_CREDIT; // 2 credit = 2 juta token/hari
 
 // Best-effort per-IP rate limit (per-isolate memory; not shared across edge nodes).
 const WINDOW_MS = 60 * 1000;
@@ -53,6 +61,83 @@ function jsonResponse(obj, status) {
   });
 }
 
+// ---------- identitas + kuota harian (KV) ----------
+function utcDay() {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+}
+
+async function userIdentity(request) {
+  // Wallet address valid = identitas kuat. Selain itu: hash IP (bukan PII
+  // mentah). Header x-echo-wallet hanya di-format-check; spoofing alamat
+  // artinya menukar kuota, bukan free-limit — signature (SIWE) bisa jadi
+  // hardening lanjutan.
+  const wallet = (request.headers.get("x-echo-wallet") || "").trim().toLowerCase();
+  if (/^0x[0-9a-f]{40}$/.test(wallet)) return "w:" + wallet;
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode("echo-quota:" + ip)
+  );
+  const hex = [...new Uint8Array(digest)]
+    .slice(0, 12)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return "i:" + hex;
+}
+
+function quotaKey(id) {
+  return `q:${id}:${utcDay()}`;
+}
+
+// KV juga dipakai untuk /api/credits; guard env.CREDITS supaya local
+// preview (node server.js / tanpa binding) tetap jalan tanpa kuota.
+async function readUsage(env, id) {
+  if (!env.CREDITS) return { tokens: 0, chats: 0, enforced: false };
+  let rec;
+  try {
+    rec = await env.CREDITS.get(quotaKey(id), "json");
+  } catch {
+    rec = null;
+  }
+  const r = rec && typeof rec === "object" ? rec : {};
+  return {
+    tokens: Number(r.tokens) || 0,
+    chats: Number(r.chats) || 0,
+    enforced: true,
+  };
+}
+
+async function addUsage(env, id, tokens) {
+  if (!env.CREDITS) return;
+  const prev = await readUsage(env, id);
+  const next = { tokens: prev.tokens + tokens, chats: prev.chats + 1 };
+  try {
+    await env.CREDITS.put(quotaKey(id), JSON.stringify(next), {
+      expirationTtl: 2 * 24 * 60 * 60, // cleanup otomatis, kuota reset via tanggal di key
+    });
+  } catch {
+    // best-effort: jangan gagalkan reply karena KV down
+  }
+}
+
+async function handleCredits(request, env) {
+  const id = await userIdentity(request);
+  const usage = await readUsage(env, id);
+  return jsonResponse(
+    {
+      id_type: id.slice(0, 2) === "w:" ? "wallet" : "ip",
+      date: utcDay(),
+      credits_limit: DAILY_CREDIT_LIMIT / TOKENS_PER_CREDIT, // 2
+      tokens_limit: DAILY_CREDIT_LIMIT,
+      tokens_used: usage.tokens,
+      chats: usage.chats,
+      credits_used: usage.tokens / TOKENS_PER_CREDIT,
+      enforced: usage.enforced,
+    },
+    200
+  );
+}
+
 async function handleChat(request, env) {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
@@ -64,6 +149,21 @@ async function handleChat(request, env) {
   const ip = request.headers.get("CF-Connecting-IP") || "unknown";
   if (rateLimited(ip)) {
     return jsonResponse({ error: "Too many requests, try again shortly" }, 429);
+  }
+  // Kuota harian: cek sebelum memanggil provider.
+  const uid = await userIdentity(request);
+  const prevUsage = await readUsage(env, uid);
+  if (prevUsage.enforced && prevUsage.tokens >= DAILY_CREDIT_LIMIT) {
+    return jsonResponse(
+      {
+        error:
+          "Daily credit limit reached (2 credits = 2 million tokens). Connect a wallet or top up on the dashboard.",
+        code: "credit_exhausted",
+        tokens_used: prevUsage.tokens,
+        tokens_limit: DAILY_CREDIT_LIMIT,
+      },
+      402
+    );
   }
   let body;
   try {
@@ -100,6 +200,13 @@ async function handleChat(request, env) {
   } catch {
     return jsonResponse({ error: "Provider error" }, 502);
   }
+  // Pemakaian token = field usage resmi provider; fallback estimasi kasar
+  // karakter/4 kalau field tidak ada, jadi kuota tetap dicoret.
+  const usageTokens =
+    data && data.usage && Number(data.usage.total_tokens)
+      ? Number(data.usage.total_tokens)
+      : Math.ceil((JSON.stringify(data).length || 0) / 4);
+  await addUsage(env, uid, usageTokens);
   const msg =
     data && data.choices && data.choices[0] && data.choices[0].message
       ? data.choices[0].message
@@ -120,6 +227,9 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/api/chat") {
       return handleChat(request, env);
+    }
+    if (url.pathname === "/api/credits") {
+      return handleCredits(request, env);
     }
     return env.ASSETS.fetch(request);
   },

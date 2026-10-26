@@ -5,3 +5,7 @@ compatibility_date = "2026-10-26"
 [assets]
 directory = "./public"
 binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "CREDITS"
+id = "ed1cdbb087054f4ba0eb358c5dab893b"

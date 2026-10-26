@@ -2187,6 +2187,7 @@
             "reply.ml": "A simple explanation (sample version):\n\nMachine learning is a way for computers to \"learn\" from example data, rather than from rules written one by one. For example, after seeing thousands of cat photos, a system learns to recognize patterns of ears, whiskers, and face shapes — and can then guess at new photos it has never seen.\n\nThe three steps: gather examples → train the model to find patterns → use the model for predictions. This answer itself is still simulation text, not the result of a real model.",
             "reply.summary": "The summarize feature is one of the planned sample uses: you paste a long text, and the model returns a short version with the main points.\n\nNo text is actually summarized yet — this answer only shows the display format. Later, once the backend is connected, the summary will be made from the text you send.",
             "reply.model": "You're currently using the model \"{model}\". There are three fictional models on this page — echo Pro, echo Fast, and echo Mini — and you can switch them from the picker in the top bar or inside the composer. The active model's name is always listed under every answer, like under this one.",
+            "reply.credits": "Daily credit limit reached — each user gets 2 free credits per day (1 credit = 1 million tokens). Open the dashboard to buy more credits, or connect a wallet and try again.",
             "reply.fallback": "This is a simulated answer to your message: \"{snippet}\"\n\nBecause the backend hasn't been built yet, I can't really process that question. What already works fully is the interface: your message appears as a bubble on the right, my answer streams in like typing, and the label under this answer shows the model currently active — {model}.\n\nLater, once the API route is connected, this simulation text will be replaced by the real model's answer, without changing how the page looks."
           },
           id: {
@@ -2211,6 +2212,7 @@
             "reply.ml": "Penjelasan sederhana (versi contoh):\n\nMachine learning adalah cara komputer \"belajar\" dari contoh data, bukan dari aturan yang ditulis satu per satu. Misalnya, setelah melihat ribuan foto kucing, sistem belajar mengenali pola telinga, kumis, dan bentuk wajah — lalu bisa menebak foto baru yang belum pernah dilihat.\n\nTiga langkahnya: kumpulkan contoh → latih model menemukan pola → pakai model untuk prediksi. Jawaban ini sendiri masih teks simulasi, bukan hasil model sungguhan.",
             "reply.summary": "Fitur ringkasan adalah salah satu contoh penggunaan yang direncanakan: kamu menempel teks panjang, lalu model mengembalikan versi singkatnya dengan poin-poin utama.\n\nBelum ada teks yang benar-benar diringkas — jawaban ini hanya menunjukkan format tampilannya. Nanti setelah backend tersambung, ringkasannya akan dibuat dari teks yang kamu kirim.",
             "reply.model": "Saat ini kamu sedang memakai model \"{model}\". Ada tiga model fiktif di halaman ini — echo Pro, echo Fast, dan echo Mini — dan kamu bisa menggantinya dari pemilih di bar atas atau di dalam composer. Nama model yang aktif selalu tercantum di bawah setiap jawaban, seperti di bawah jawaban ini.",
+            "reply.credits": "Kuota kredit harian habis — setiap pengguna dapat 2 kredit gratis per hari (1 kredit = 1 juta token). Buka dashboard untuk beli kredit tambahan, atau hubungkan wallet lalu coba lagi.",
             "reply.fallback": "Ini jawaban simulasi untuk pesanmu: \"{snippet}\"\n\nKarena backend belum dibangun, aku belum bisa benar-benar memproses pertanyaan itu. Yang sudah bekerja penuh adalah antarmukanya: pesanmu tampil sebagai gelembung di kanan, jawabanku mengalir seperti diketik, dan label di bawah jawaban ini menunjukkan model yang sedang aktif — {model}.\n\nSetelah route API tersambung nanti, teks simulasi ini akan digantikan jawaban model yang sesungguhnya, tanpa mengubah tampilan halamannya."
           },
           ru: {
@@ -3780,9 +3782,26 @@
           try {
             fetch("/api/chat", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: Object.assign(
+                { "Content-Type": "application/json" },
+                window.ECHO_WALLET ? { "x-echo-wallet": window.ECHO_WALLET } : {}
+              ),
               body: JSON.stringify({ messages: history, model: BEAM_MODEL })
             }).then(function (res) {
+              if (res.status === 402) {
+                // Kuota harian habis: kasih balasan singkat lalu arahkan
+                // ke top-up di dashboard (keputusan produk: block + redirect).
+                settled = true;
+                res.json().catch(function () { return {}; }).then(function (e) {
+                  var m = (e && e.error) || "Daily credit limit reached (2 credits = 2 million tokens).";
+                  var r = window.ECHO_T ? window.ECHO_T("reply.credits") : null;
+                  onReply(r || m);
+                  window.setTimeout(function () {
+                    location.hash = "#/dashboard";
+                  }, 1400);
+                });
+                return null;
+              }
               if (!res.ok) { fallback(); return null; }
               return res.json();
             }).then(function (data) {
@@ -5732,6 +5751,63 @@
       })();
     </script>
 
+    <script>
+    /* =====================================================================
+       Dashboard credits realtime: isi kartu "Credit balance", "Chats",
+       dan "Token usage" dari /api/credits (data riil Worker/KV).
+       Non-wallet = kuota per IP (hash); wallet = kuota per address via
+       header x-echo-wallet. Kartu pemakaian per model tetap sample data.
+       ===================================================================== */
+    (function () {
+      var dashPage = document.getElementById("page-dashboard");
+      if (!dashPage) return;
+
+      function wallet() { return window.ECHO_WALLET || null; }
+
+      function setFirstText(el, text) {
+        var node = el && el.firstChild;
+        if (node && node.nodeType === 3) node.nodeValue = text;
+      }
+      function fmt(n) {
+        if (n >= 1e9) return (n / 1e9).toFixed(2);
+        if (n >= 1e6) return (n / 1e6).toFixed(2);
+        if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+        return String(Math.round(n));
+      }
+
+      function paint(d) {
+        if (!d || d.enforced !== true) return; // tanpa KV (local preview): biarkan sample
+        var cards = dashPage.querySelectorAll(".stat-grid .stat-card");
+        if (!cards.length) return;
+        var remaining = Math.max(0, d.credits_limit - d.credits_used);
+        var balanceVal = cards[0].querySelector(".stat-value");
+        if (balanceVal) setFirstText(balanceVal, remaining.toFixed(2) + " ");
+        if (cards[1]) {
+          var chatsVal = cards[1].querySelector(".stat-value");
+          if (chatsVal) setFirstText(chatsVal, String(d.chats) + " ");
+        }
+        if (cards[2]) {
+          var tokVal = cards[2].querySelector(".stat-value");
+          if (tokVal) setFirstText(tokVal, fmt(d.tokens_used) + " ");
+        }
+      }
+
+      function fetchCredits() {
+        var h = {};
+        if (wallet()) h["x-echo-wallet"] = wallet();
+        fetch("/api/credits", { headers: h })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(paint)
+          .catch(function () { /* diam: kartu tetap sample */ });
+      }
+
+      window.addEventListener("hashchange", function () {
+        if (!dashPage.classList.contains("hidden")) fetchCredits();
+      });
+      if (!dashPage.classList.contains("hidden")) fetchCredits();
+    })();
+    </script>
+
     <script type="module">
     /* =====================================================================
        Connect Wallet — Reown AppKit, hanya untuk halaman #/app.
@@ -5799,6 +5875,8 @@
       }
       function updateFromAccount(account) {
         currentAddr = (account && account.address) || null;
+        // Expose ke script lain (quota header, dashboard credits).
+        window.ECHO_WALLET = currentAddr;
         paint();
       }
       window.addEventListener("eip6963:announceProvider", (e) => {
