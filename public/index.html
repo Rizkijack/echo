@@ -3740,7 +3740,11 @@
             } else if (w.classList.contains("msg-assistant")) {
               var te = w.querySelector(".msg-text");
               var txt = te ? te.textContent : "";
-              if (txt) msgs.push({ role: "assistant", content: txt });
+              if (txt) {
+                var am = { role: "assistant", content: txt };
+                if (w._reasoningContent) am.reasoning_content = w._reasoningContent;
+                msgs.push(am);
+              }
             }
           }
           return msgs;
@@ -3765,7 +3769,7 @@
               if (settled) return;
               if (data && typeof data.reply === "string" && data.reply.length) {
                 settled = true;
-                onReply(data.reply);
+                onReply(data.reply, data.reasoning_content);
               } else {
                 fallback();
               }
@@ -3899,7 +3903,8 @@
           shell.textEl.innerHTML = '<span class="typing" aria-label="' + window.ECHO_T("chat.typing") + '"><i></i><i></i><i></i></span>';
           scrollBottom();
           var history = collectHistory(shell.wrap);
-          fetchReply(history, promptText, function (reply) {
+          fetchReply(history, promptText, function (reply, reasoning) {
+            shell.wrap._reasoningContent = (typeof reasoning === "string") ? reasoning : "";
             streamInto(shell, reply, function () { busy = false; autoGrow(); input.focus(); });
           });
         }
@@ -3918,8 +3923,9 @@
           var modelAtSend = currentModel;
           var shell = addAssistantShell(modelAtSend);
           shell.wrap.setAttribute("data-prompt", text);
-          fetchReply(history, text, function (reply) {
+          fetchReply(history, text, function (reply, reasoning) {
             shell.model = modelAtSend;
+            shell.wrap._reasoningContent = (typeof reasoning === "string") ? reasoning : "";
             streamInto(shell, reply, function () { busy = false; autoGrow(); input.focus(); });
           });
         }

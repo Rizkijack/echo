@@ -19,17 +19,31 @@ function rateLimited(ip) {
   return false;
 }
 
+// Beam is a reasoning model: every earlier assistant message MUST carry the
+// reasoning_content returned with it, or the provider rejects the request
+// (400 missing_required_parameter). Assistant turns without one (pre-fix
+// chats, simulated fallbacks) are dropped so the conversation can recover
+// instead of failing forever.
 function cleanMessages(input) {
   if (!Array.isArray(input)) return [];
-  return input
-    .filter(
-      (m) =>
-        m &&
-        typeof m.content === "string" &&
-        (m.role === "user" || m.role === "assistant")
-    )
-    .slice(-20)
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 4000) }));
+  const out = [];
+  for (const m of input) {
+    if (!m || typeof m.content !== "string") continue;
+    if (m.role === "user") {
+      out.push({ role: "user", content: m.content.slice(0, 4000) });
+    } else if (
+      m.role === "assistant" &&
+      typeof m.reasoning_content === "string" &&
+      m.reasoning_content
+    ) {
+      out.push({
+        role: "assistant",
+        content: m.content.slice(0, 4000),
+        reasoning_content: m.reasoning_content,
+      });
+    }
+  }
+  return out.slice(-20);
 }
 
 function jsonResponse(obj, status) {
@@ -61,29 +75,44 @@ async function handleChat(request, env) {
   if (!messages.length || messages[messages.length - 1].role !== "user") {
     return jsonResponse({ error: "A user message is required" }, 400);
   }
-  const upstream = await fetch(UPSTREAM, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-    }),
-  });
+  let upstream;
+  try {
+    upstream = await fetch(UPSTREAM, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
+      }),
+    });
+  } catch {
+    return jsonResponse({ error: "Provider error" }, 502);
+  }
   if (!upstream.ok) {
     return jsonResponse({ error: "Provider error" }, 502);
   }
-  const data = await upstream.json();
-  const reply =
+  let data;
+  try {
+    data = await upstream.json();
+  } catch {
+    return jsonResponse({ error: "Provider error" }, 502);
+  }
+  const msg =
     data && data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : "";
+      ? data.choices[0].message
+      : null;
+  const reply = msg ? msg.content : "";
   if (typeof reply !== "string" || !reply) {
     return jsonResponse({ error: "Empty provider reply" }, 502);
   }
-  return jsonResponse({ reply }, 200);
+  const resp = { reply };
+  if (typeof msg.reasoning_content === "string" && msg.reasoning_content) {
+    resp.reasoning_content = msg.reasoning_content;
+  }
+  return jsonResponse(resp, 200);
 }
 
 export default {
