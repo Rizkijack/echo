@@ -35,5 +35,6 @@ Serves `public/` at http://localhost:5173 and proxies `/api/chat` to
 Reflection Beam (model Beam-1.0-501B-A23B). Env: `REFLECTION_API_KEY`
 (required), `REFLECTION_API_BASE` (optional, default
 `https://api.reflection.ai`), `PORT` (optional, default 5173). Set the key
-in the environment when running; server.js does not read `.env` files
-itself. Never commit a real key.
+in the environment when running, or put it in a `.env` file in the
+repo root — server.js loads it (simple KEY=VALUE parser, no
+dependency; pre-set environment wins). Never commit a real key.
