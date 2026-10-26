@@ -3745,6 +3745,56 @@
           return window.ECHO_T("reply.fallback", { snippet: snippet, model: currentModel });
         }
 
+        /* ---------- koneksi /api/chat (Reflection Beam) + fallback simulasi ---------- */
+        var BEAM_MODEL = "Beam-1.0-501B-A23B";
+
+        function collectHistory(beforeWrap) {
+          var msgs = [];
+          var wraps = msgList.children;
+          for (var i = 0; i < wraps.length; i++) {
+            var w = wraps[i];
+            if (beforeWrap && w === beforeWrap) break;
+            if (w.classList.contains("msg-user")) {
+              var b = w.querySelector(".bubble");
+              if (b && b.textContent) msgs.push({ role: "user", content: b.textContent });
+            } else if (w.classList.contains("msg-assistant")) {
+              var te = w.querySelector(".msg-text");
+              var txt = te ? te.textContent : "";
+              if (txt) msgs.push({ role: "assistant", content: txt });
+            }
+          }
+          return msgs;
+        }
+
+        function fetchReply(history, promptText, onReply) {
+          var settled = false;
+          function fallback() {
+            if (settled) return;
+            settled = true;
+            onReply(demoReply(promptText));
+          }
+          try {
+            fetch("/api/chat", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ messages: history, model: BEAM_MODEL })
+            }).then(function (res) {
+              if (!res.ok) { fallback(); return null; }
+              return res.json();
+            }).then(function (data) {
+              if (settled) return;
+              if (data && typeof data.reply === "string" && data.reply.length) {
+                settled = true;
+                onReply(data.reply);
+              } else {
+                fallback();
+              }
+            }).catch(function () { fallback(); });
+          } catch (e) {
+            fallback();
+          }
+        }
+
         /* ---------- message rendering ---------- */
         var LOGO_SMALL = '<svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M8 6h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H22l-9.2 7.4c-.9.7-2.3.1-2.3-1.1V38H8a6 6 0 0 1-6-6V12A6 6 0 0 1 8 6Z" fill="#dfa05f"/><rect x="13" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/><rect x="21.7" y="14" width="4.6" height="19" rx="2.3" fill="#1a1206"/><rect x="30.4" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/></svg>';
         var ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V6a2 2 0 0 1 2-2h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
@@ -3868,9 +3918,10 @@
           shell.meta.classList.add("hidden");
           shell.textEl.innerHTML = '<span class="typing" aria-label="' + window.ECHO_T("chat.typing") + '"><i></i><i></i><i></i></span>';
           scrollBottom();
-          setTimeout(function () {
-            streamInto(shell, demoReply(promptText), function () { busy = false; autoGrow(); input.focus(); });
-          }, 650);
+          var history = collectHistory(shell.wrap);
+          fetchReply(history, promptText, function (reply) {
+            streamInto(shell, reply, function () { busy = false; autoGrow(); input.focus(); });
+          });
         }
 
         function send(text) {
@@ -3881,15 +3932,16 @@
             $("chatTitle").textContent = text.length > 42 ? text.slice(0, 42) + "…" : text;
           }
           addUserMsg(text);
+          var history = collectHistory(null);
           input.value = "";
           autoGrow();
           var modelAtSend = currentModel;
           var shell = addAssistantShell(modelAtSend);
           shell.wrap.setAttribute("data-prompt", text);
-          setTimeout(function () {
+          fetchReply(history, text, function (reply) {
             shell.model = modelAtSend;
-            streamInto(shell, demoReply(text), function () { busy = false; autoGrow(); input.focus(); });
-          }, 700);
+            streamInto(shell, reply, function () { busy = false; autoGrow(); input.focus(); });
+          });
         }
 
         $("composerForm").addEventListener("submit", function (e) {
