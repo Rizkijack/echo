@@ -2,6 +2,13 @@ const http = require('node:http');
 const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
+// muat .env sederhana (KEY=VALUE per baris); env yang sudah diset menang
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2];
+  }
+} catch { /* .env opsional */ }
 const ROOT = path.resolve(__dirname, 'public'); // main serves static from public/
 const PORT = process.env.PORT || 5173;
 const TYPES = {
@@ -85,6 +92,7 @@ function handleChat(req, res) {
     delete headers.connection;
     delete headers['keep-alive'];
     delete headers['proxy-connection'];
+    delete headers.expect;
     delete headers.te;
     headers.authorization = 'Bearer ' + key;
     headers['content-type'] = 'application/json';
@@ -104,6 +112,7 @@ function handleChat(req, res) {
         res.end(JSON.stringify({ error: { message: 'Upstream request failed: ' + err.message } }));
       }
     });
+    res.on('close', () => { if (!res.writableEnded) upstream.destroy(); });
     upstream.end(body);
   });
 }
