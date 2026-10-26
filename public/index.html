@@ -431,6 +431,21 @@
       }
       .newchat-btn:hover { background: var(--accent-deep); color: #fff7ea; }
       .newchat-btn svg { width: 15px; height: 15px; }
+      /* Tombol wallet: sekunder di pojok kanan atas topbar
+         (setelah "New chat"). Saat terhubung, [data-state=connected]
+         menampilkan address terpotong dengan font mono. */
+      .wallet-btn {
+        display: inline-flex; align-items: center; gap: 7px;
+        background: transparent; color: var(--ink);
+        border: 1px solid var(--line); border-radius: 6px;
+        font-weight: 600; font-size: 13.5px; padding: 9px 15px;
+        white-space: nowrap; flex: none;
+      }
+      .wallet-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+      .wallet-btn svg { width: 15px; height: 15px; flex: none; }
+      .wallet-btn[data-state="connected"] {
+        font-family: var(--font-mono); font-size: 12.5px;
+      }
 
       .chat-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
       .chat-col { max-width: 760px; margin: 0 auto; padding: 30px 24px 12px; width: 100%; }
@@ -1101,6 +1116,7 @@
         .topbar-title { display: none; }
         .topbar .model-select { max-width: 150px; font-size: 12.5px; padding-left: 11px; }
         .newchat-btn { padding: 8px 12px; font-size: 12.5px; }
+        .wallet-btn { padding: 8px 10px; font-size: 12.5px; }
         .chat-col { padding: 20px 16px 8px; }
         .composer-zone { padding: 6px 12px 12px; }
         .composer .model-select { max-width: 138px; font-size: 12.5px; }
@@ -1662,6 +1678,10 @@
             <button class="newchat-btn" id="btnNewChatTop" type="button">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
               New chat
+            </button>
+            <button class="wallet-btn" id="btnWallet" type="button" title="Connect wallet" aria-label="Connect wallet">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h12A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-12A2.5 2.5 0 0 1 3 16.5v-9Z" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 12h.01" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+              <span id="btnWalletLabel">Connect Wallet</span>
             </button>
           </header>
 
@@ -5710,6 +5730,121 @@
         }
         window.requestAnimationFrame(tick);
       })();
+    </script>
+
+    <script type="module">
+    /* =====================================================================
+       Connect Wallet — Reown AppKit, hanya untuk halaman #/app.
+       - SDK di-download dinamis saat pertama user membuka #/app (lazy):
+         home/dashboard/docs tidak ikut memuat bundle wallet.
+       - Ganti PROJECT_ID dengan Project ID dari https://cloud.reown.com
+         (gratis). Tanpa ID valid, login WalletConnect tidak berfungsi.
+       - Chains: Base Mainnet + Robinhood Chain (custom, chain ID 4663,
+         Arbitrum Orbit: RPC + explorer resmi). Urutan networks = urutan
+         tampil di modal.
+       ===================================================================== */
+    (function () {
+      const PROJECT_ID = "74c3944c7d1579478f020903a8e6d008";
+      const APPKIT_VERSION = "1.8.24";
+
+      const btn = document.getElementById("btnWallet");
+      const labelEl = document.getElementById("btnWalletLabel");
+      if (!btn || !labelEl) return;
+
+      const defaultLabel = labelEl.textContent;
+      let appKit = null;      // instance AppKit (lazy)
+      let bootPromise = null; // dedupe boot ganda
+
+      const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+      function setLabel(state, text) {
+        btn.dataset.state = state;
+        labelEl.textContent = text;
+        btn.title = state === "connected" ? "View account / disconnect" : "Connect wallet";
+      }
+      function resetLabel() { setLabel("disconnected", defaultLabel); }
+
+      // Robinhood Chain: Arbitrum Orbit, gas ETH (docs.robinhood.com/chain).
+      // Shape mengikuti CaipNetwork AppKit (rpcUrls.default.http), dibungkus
+      // defineChain bawaan @reown/appkit/networks (diekspor dari viem).
+      const robinhoodChain = {
+        id: 4663,
+        caipNetworkId: "eip155:4663",
+        chainNamespace: "eip155",
+        name: "Robinhood Chain",
+        rpcUrls: { default: { http: ["https://rpc.mainnet.chain.robinhood.com/"] } },
+        nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+        blockExplorers: { default: { name: "Blockscout", url: "https://robinhoodchain.blockscout.com" } },
+        testnet: false,
+      };
+
+      function updateFromAccount(account) {
+        const addr = account && account.address;
+        if (addr) setLabel("connected", short(addr));
+        else resetLabel();
+      }
+
+      async function boot() {
+        if (appKit) return appKit;
+        if (!bootPromise) {
+          if (!PROJECT_ID || PROJECT_ID.indexOf("REPLACE_") === 0) {
+            bootPromise = Promise.reject(
+              new Error("Reown project ID belum diset (PROJECT_ID).")
+            );
+          } else {
+            const base = "https://esm.sh/@reown/appkit@" + APPKIT_VERSION;
+            bootPromise = Promise.all([
+              import(base),
+              import(base + "/networks"),
+            ]).then(([core, networksMod]) => {
+              const { createAppKit } = core;
+              const { mainnet, base: baseChain, defineChain } = networksMod;
+              const kit = createAppKit({
+                adapters: [],
+                networks: [mainnet, baseChain, defineChain(robinhoodChain)],
+                projectId: PROJECT_ID,
+                themeMode: "dark",
+                themeVariables: { "--w3m-accent": "#dfa05f" },
+                metadata: {
+                  name: "echo",
+                  description: "echo — AI chat interface",
+                  url: location.origin,
+                  icons: [location.origin + "/favicon.ico"],
+                },
+              });
+              kit.subscribeAccount(updateFromAccount);
+              appKit = kit;
+              return kit;
+            });
+          }
+          bootPromise.catch(() => { /* ditangani di click handler */ });
+        }
+        return bootPromise;
+      }
+
+      btn.addEventListener("click", async () => {
+        setLabel("loading", "…");
+        let kit;
+        try {
+          kit = await boot();
+        } catch (err) {
+          console.error("AppKit boot failed:", err);
+          resetLabel();
+          btn.title = err && err.message ? err.message : "Wallet is unavailable";
+          return;
+        }
+        if (btn.dataset.state === "connected") kit.open({ view: "Account" });
+        else kit.open({ view: "Connect" });
+      });
+
+      // Lazy-init: boot SDK saat pertama halaman #/app tampil.
+      function maybeBoot() {
+        if ((location.hash || "#/").indexOf("#/app") === 0) {
+          boot().catch(() => { /* silent: error ditampilkan lewat click handler */ });
+        }
+      }
+      maybeBoot();
+      window.addEventListener("hashchange", maybeBoot);
+    })();
     </script>
 
   </body>
