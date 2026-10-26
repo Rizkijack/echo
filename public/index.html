@@ -5761,7 +5761,6 @@
         labelEl.textContent = text;
         btn.title = state === "connected" ? "View account / disconnect" : "Connect wallet";
       }
-      function resetLabel() { setLabel("disconnected", defaultLabel); }
 
       // Robinhood Chain: Arbitrum Orbit, gas ETH (docs.robinhood.com/chain).
       // Shape mengikuti CaipNetwork AppKit (rpcUrls.default.http), dibungkus
@@ -5777,10 +5776,45 @@
         testnet: false,
       };
 
+      // ---- Deteksi otomatis wallet browser (EIP-6963 + legacy) ----
+      // Jalan realtime: listener announceProvider tetap menyala, request
+      // baru dikirim tiap membuka #/app. Tanpa localStorage/polling.
+      let currentAddr = null;
+      const detected = []; // { name } — sumber: announceProvider / legacy
+      function indicatorSuffix() {
+        if (!detected.length) return "";
+        if (detected.length === 1) return " · " + detected[0].name;
+        return " · " + detected.length + " wallets";
+      }
+      function paint() {
+        if (currentAddr) {
+          setLabel("connected", short(currentAddr));
+          return;
+        }
+        btn.dataset.state = "disconnected";
+        labelEl.textContent = defaultLabel + indicatorSuffix();
+        btn.title = detected.length
+          ? "Wallet detected: " + detected.map((w) => w.name).join(", ")
+          : "Connect wallet";
+      }
       function updateFromAccount(account) {
-        const addr = account && account.address;
-        if (addr) setLabel("connected", short(addr));
-        else resetLabel();
+        currentAddr = (account && account.address) || null;
+        paint();
+      }
+      window.addEventListener("eip6963:announceProvider", (e) => {
+        const info = e && e.detail && e.detail.info;
+        if (!info || detected.some((w) => w.name === info.name)) return;
+        detected.push({ name: info.name || "Wallet" });
+        paint();
+      });
+      function requestDetect() {
+        detected.length = 0;
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+        // Fallback wallet lama yang belum anak EIP-6963.
+        if (!detected.length && window.ethereum) {
+          detected.push({ name: window.ethereum.isMetaMask ? "MetaMask" : "Browser Wallet" });
+        }
+        paint();
       }
 
       async function boot() {
@@ -5795,11 +5829,14 @@
             bootPromise = Promise.all([
               import(base),
               import(base + "/networks"),
-            ]).then(([core, networksMod]) => {
+              // Adapter = sumber deteksi wallet browser (injected + EIP-6963 +
+              // Coinbase). Wallet extension muncul di tab Injected modal.
+              import("https://esm.sh/@reown/appkit-adapter-ethers@" + APPKIT_VERSION),
+            ]).then(([core, networksMod, adapterMod]) => {
               const { createAppKit } = core;
               const { mainnet, base: baseChain, defineChain } = networksMod;
               const kit = createAppKit({
-                adapters: [],
+                adapters: [new adapterMod.EthersAdapter()],
                 networks: [mainnet, baseChain, defineChain(robinhoodChain)],
                 projectId: PROJECT_ID,
                 themeMode: "dark",
@@ -5828,7 +5865,7 @@
           kit = await boot();
         } catch (err) {
           console.error("AppKit boot failed:", err);
-          resetLabel();
+          paint();
           btn.title = err && err.message ? err.message : "Wallet is unavailable";
           return;
         }
@@ -5836,9 +5873,10 @@
         else kit.open({ view: "Connect" });
       });
 
-      // Lazy-init: boot SDK saat pertama halaman #/app tampil.
+      // Lazy-init: boot SDK + deteksi wallet saat halaman #/app tampil.
       function maybeBoot() {
         if ((location.hash || "#/").indexOf("#/app") === 0) {
+          requestDetect();
           boot().catch(() => { /* silent: error ditampilkan lewat click handler */ });
         }
       }
