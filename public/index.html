@@ -423,6 +423,13 @@
         padding: 8px 32px 8px 13px; max-width: 210px;
       }
       .model-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+      /* Label model tetap (bukan picker): pil yang sama tanpa panah
+         dropdown dan tanpa menu, karena hanya ada satu model: Beam. */
+      .model-fixed {
+        background-image: none; padding-right: 13px;
+        display: inline-flex; align-items: center;
+        cursor: default; user-select: none;
+      }
       .newchat-btn {
         display: inline-flex; align-items: center; gap: 7px;
         background: var(--accent); color: var(--accent-ink); border: none;
@@ -1658,12 +1665,7 @@
               </div>
             </div>
             <span class="spacer"></span>
-            <label class="hidden" for="modelTop" data-i18n="model.topLabel">Model (top bar)</label>
-            <select class="model-select" id="modelTop" data-i18n-attr="aria-label:model.choose" aria-label="Choose a model">
-              <option>echo Pro</option>
-              <option selected>echo Fast</option>
-              <option>echo Mini</option>
-            </select>
+            <span class="model-select model-fixed" aria-label="Model">Beam</span>
             <button class="newchat-btn" id="btnNewChatTop" type="button">
               <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
               New chat
@@ -1702,12 +1704,7 @@
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                   </button>
                   <span class="spacer"></span>
-                  <label class="hidden" for="modelComposer" data-i18n="model.composerLabel">Model (composer)</label>
-                  <select class="model-select" id="modelComposer" data-i18n-attr="aria-label:model.chooseComposer" aria-label="Choose a model from the composer">
-                    <option>echo Pro</option>
-                    <option selected>echo Fast</option>
-                    <option>echo Mini</option>
-                  </select>
+                  <span class="model-select model-fixed" aria-label="Model">Beam</span>
                   <button class="send-btn" id="btnSend" type="submit" data-i18n-attr="title:send.title;aria-label:send.aria" title="Send" aria-label="Send message" disabled>
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m0 0-6 6m6-6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </button>
@@ -3685,23 +3682,13 @@
         window.addEventListener("hashchange", route);
 
         /* ---------- chat state ---------- */
-        var currentModel = "echo Fast";
+        var currentModel = "Beam";
         var busy = false;
         var msgList = $("msgList");
         var emptyState = $("emptyState");
         var chatScroll = $("chatScroll");
         var input = $("composerInput");
         var btnSend = $("btnSend");
-        var modelTop = $("modelTop");
-        var modelComposer = $("modelComposer");
-
-        function setModel(name, source) {
-          currentModel = name;
-          if (source !== modelTop) modelTop.value = name;
-          if (source !== modelComposer) modelComposer.value = name;
-        }
-        modelTop.addEventListener("change", function () { setModel(modelTop.value, modelTop); });
-        modelComposer.addEventListener("change", function () { setModel(modelComposer.value, modelComposer); });
 
         function scrollBottom() {
           requestAnimationFrame(function () { chatScroll.scrollTop = chatScroll.scrollHeight; });
