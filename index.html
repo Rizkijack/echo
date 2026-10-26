@@ -494,7 +494,9 @@
       }
       .typing i:nth-child(2) { animation-delay: 0.18s; }
       .typing i:nth-child(3) { animation-delay: 0.36s; }
-      @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+      @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1.0; } }
+      /* reasoning-only streaming helper: soft accent pulse around the whole bubble text */
+      .msg-assistant.thinking .typing i { background: var(--accent); }
       @media (prefers-reduced-motion: reduce) {
         .typing i { animation: none; opacity: 0.6; }
       }
@@ -1711,6 +1713,9 @@
                   <button class="send-btn" id="btnSend" type="submit" data-i18n-attr="title:send.title;aria-label:send.aria" title="Send" aria-label="Send message" disabled>
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m0 0-6 6m6-6 6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   </button>
+                  <button class="icon-btn" id="btnStop" type="button" hidden data-i18n-attr="title:send.stop;aria-label:send.stop" title="Stop" aria-label="Stop generating">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </button>
                 </div>
               </form>
               <p class="composer-caption" data-i18n-html="composer.caption"><strong>Mode</strong> — answers are simulated in the browser and may be inaccurate. Not connected to a real AI yet.</p>
@@ -1888,6 +1893,30 @@
                   <button class="btn btn-ghost" type="button" disabled style="padding: 10px 16px; font-size: 14px;" data-i18n="api.newKey">Create new key (soon)</button>
                   <a class="btn btn-ghost" href="#/app" style="padding: 10px 16px; font-size: 14px;" data-i18n="api.changeModel">Change the default model in the app</a>
                 </div>
+                <ul class="kv-list" style="margin-top: 14px;">
+                  <li>
+                    <span class="k">Backend mode</span>
+                    <span class="v">
+                      <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                        <input type="checkbox" id="chkOnline" style="accent-color: var(--accent); width: 16px; height: 16px;">
+                        Online (real model)
+                      </label>
+                    </span>
+                  </li>
+                  <li>
+                    <span class="k">Reasoning effort</span>
+                    <span class="v">
+                      <select id="selEffort" style="max-width: 150px;">
+                        <option value="low">low</option>
+                        <option value="medium">medium</option>
+                        <option value="high">high</option>
+                        <option value="xhigh">xhigh</option>
+                        <option value="max" selected>max</option>
+                      </select>
+                    </span>
+                  </li>
+                </ul>
+                <p style="margin-top: 10px; font-size: 12.5px; color: var(--ink-2); text-align: center;">Online mode posts to <code>/api/chat</code> with model <code>Beam-1.0-501B-A23B</code>; the server holds <code>REFLECTION_API_KEY</code>, so nothing is sent from your browser.</p>
               </div>
             </section>
 
@@ -3687,13 +3716,40 @@
         /* ---------- chat state ---------- */
         var currentModel = "echo Fast";
         var busy = false;
+        var online = false;
+        var currentEffort = "max";
+        var chatHist = [];
+        var abortCtl = null;
         var msgList = $("msgList");
         var emptyState = $("emptyState");
         var chatScroll = $("chatScroll");
         var input = $("composerInput");
         var btnSend = $("btnSend");
+        var btnStop = $("btnStop");
         var modelTop = $("modelTop");
         var modelComposer = $("modelComposer");
+
+        try {
+          var savedOnline = window.localStorage.getItem("echo-online");
+          if (savedOnline === "1") online = true;
+        } catch (e) { /* storage tidak tersedia: pakai default */ }
+        try {
+          var savedEffort = window.localStorage.getItem("echo-effort");
+          if (savedEffort && ["low", "medium", "high", "xhigh", "max"].indexOf(savedEffort) >= 0) currentEffort = savedEffort;
+        } catch (e) { /* storage tidak tersedia: pakai default */ }
+
+        $("chkOnline").checked = online;
+        $("selEffort").value = currentEffort;
+        $("chkOnline").addEventListener("change", function () {
+          online = this.checked;
+          try { window.localStorage.setItem("echo-online", online ? "1" : "0"); } catch (e) { /* abaikan */ }
+          toast(online ? "Online mode enabled — answers come from /api/chat." : "Demo mode enabled — answers are simulated in the browser.");
+        });
+        $("selEffort").addEventListener("change", function () {
+          currentEffort = this.value;
+          try { window.localStorage.setItem("echo-effort", currentEffort); } catch (e) { /* abaikan */ }
+          toast("Reasoning effort set to " + currentEffort + ".");
+        });
 
         function setModel(name, source) {
           currentModel = name;
@@ -3825,8 +3881,9 @@
           }
         }
 
-        function streamInto(shell, fullText, onDone) {
+        function streamInto(shell, fullText, onDone, reasoningContent) {
           shell.fullText = fullText;
+          shell.reasoningContent = reasoningContent || "";
           if (reduceMotion) {
             shell.textEl.textContent = fullText;
             finishShell(shell);
@@ -3861,6 +3918,130 @@
             var lastUser = shell.wrap.getAttribute("data-prompt") || "";
             regenerate(shell, lastUser);
           };
+          chatHist.push({ role: "assistant", content: shell.fullText, reasoning_content: shell.reasoningContent || "" });
+        }
+
+        /* ---------- online mode (POST /api/chat, SSE) ---------- */
+        function buildMessages() {
+          var payload = [{ role: "system", content: "You are echo, a helpful AI assistant." }];
+          var hist = chatHist.slice(-12);
+          for (var i = hist.length - 1; i >= 0; i--) {
+            if (hist[i].role === "assistant" && !hist[i].reasoning_content) continue;
+            payload.push(hist[i]);
+          }
+          return payload;
+        }
+
+        function requestOnline(text, shell, onDone) {
+          abortCtl = new AbortController();
+          btnStop.hidden = false;
+          var content = "";
+          var reasoning = "";
+          var sawContent = false;
+          var done = false;
+
+          function finalize() {
+            if (done) return;
+            done = true;
+            btnStop.hidden = true;
+            shell.wrap.classList.remove("thinking");
+            var typingEl = shell.textEl.querySelector(".typing");
+            if (typingEl && !sawContent) typingEl.remove();
+            if (!content) content = "(stopped before any output)";
+            shell.fullText = content;
+            shell.reasoningContent = reasoning;
+            chatHist.push({ role: "assistant", content: content, reasoning_content: reasoning });
+            shell.meta.classList.remove("hidden");
+            shell.btnCopy.onclick = function () { copyText(shell.fullText, shell.btnCopy); };
+            shell.btnRegen.onclick = function () {
+              if (busy) return;
+              var lastUser = shell.wrap.getAttribute("data-prompt") || "";
+              regenerate(shell, lastUser);
+            };
+            busy = false; autoGrow(); input.focus();
+            if (onDone) onDone();
+          }
+
+          fetch("/api/chat", {
+            method: "POST",
+            body: JSON.stringify({ model: "Beam-1.0-501B-A23B", messages: buildMessages(), stream: true, reasoning_effort: currentEffort, max_completion_tokens: 4096 }),
+            headers: { "Content-Type": "application/json" },
+            signal: abortCtl.signal
+          }).then(function (res) {
+            if (!res.ok) {
+              var msg = res.status === 401 ? "The server rejected the request (auth error)." :
+                (res.status === 400 ? "The server rejected the payload for this turn." :
+                "The backend returned an error (" + res.status + ").");
+              toast(msg);
+              if (res.status === 401 || res.status === 400 || res.status < 500) return null;
+              throw new Error("server5xx"); /* 5xx: demo fallback */
+            }
+            return res.body;
+          }).then(function (bodyStream) {
+            if (!bodyStream) return;
+            var reader = bodyStream.getReader();
+            var decoder = new TextDecoder();
+            var buffer = "";
+
+            function processLine(line) {
+              if (line.slice(0, 5) !== "data:") return;
+              var data = line.slice(5).trim();
+              if (data === "[DONE]") { finalize(); return; }
+              var chunk;
+              try { chunk = JSON.parse(data); } catch (e) { return; }
+              var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
+              if (!delta) return;
+              if (delta.reasoning_content) {
+                reasoning += delta.reasoning_content;
+                if (!sawContent) shell.wrap.classList.add("thinking");
+              }
+              if (delta.content) {
+                if (!sawContent) {
+                  sawContent = true;
+                  var typingEl = shell.textEl.querySelector(".typing");
+                  if (typingEl) typingEl.remove();
+                  shell.wrap.classList.remove("thinking");
+                }
+                content += delta.content;
+                var t = shell.textEl.textContent;
+                shell.textEl.textContent = t ? t + delta.content : delta.content;
+                scrollBottom();
+              }
+            }
+
+            function pump() {
+              return reader.read().then(function (result) {
+                if (result.done) { finalize(); return; }
+                buffer += decoder.decode(result.value, { stream: true });
+                var lines = buffer.split("\n");
+                buffer = lines.pop();
+                for (var li = 0; li < lines.length; li++) {
+                  var line = lines[li].replace(/\r$/, "");
+                  if (line) processLine(line);
+                }
+                if (!done) return pump();
+              });
+            }
+            return pump();
+          }).catch(function (err) {
+            if (done) return;
+            if (err && err.name === "AbortError") {
+              toast("Generation stopped.");
+              finalize();
+              return;
+            }
+            /* network / 5xx error: fall back to demo path */
+            toast("Can't reach the backend right now — showing a demo answer instead.");
+            var typingEl = shell.textEl.querySelector(".typing");
+            if (typingEl) typingEl.remove();
+            shell.wrap.classList.remove("thinking");
+            var demoText = demoReply(text);
+            streamInto(shell, demoText, function () {
+              chatHist.push({ role: "assistant", content: demoText, reasoning_content: "" });
+              busy = false; autoGrow(); input.focus();
+              if (onDone) onDone();
+            });
+          });
         }
 
         function regenerate(shell, promptText) {
@@ -3868,9 +4049,23 @@
           shell.meta.classList.add("hidden");
           shell.textEl.innerHTML = '<span class="typing" aria-label="' + window.ECHO_T("chat.typing") + '"><i></i><i></i><i></i></span>';
           scrollBottom();
-          setTimeout(function () {
-            streamInto(shell, demoReply(promptText), function () { busy = false; autoGrow(); input.focus(); });
-          }, 650);
+          /* drop the last assistant turn — it is being regenerated */
+          for (var i = chatHist.length - 1; i >= 0; i--) {
+            if (chatHist[i].role === "assistant") { chatHist.splice(i, 1); break; }
+          }
+          if (online) {
+            shell.wrap.setAttribute("data-prompt", promptText);
+            requestOnline(promptText, shell, null);
+          } else {
+            var reasonMarker = shell.reasoningContent || "";
+            setTimeout(function () {
+              var demoText = demoReply(promptText);
+              streamInto(shell, demoText, function () {
+                chatHist.push({ role: "assistant", content: demoText, reasoning_content: reasonMarker });
+                busy = false; autoGrow(); input.focus();
+              });
+            }, 650);
+          }
         }
 
         function send(text) {
@@ -3881,16 +4076,26 @@
             $("chatTitle").textContent = text.length > 42 ? text.slice(0, 42) + "…" : text;
           }
           addUserMsg(text);
+          chatHist.push({ role: "user", content: text });
           input.value = "";
           autoGrow();
           var modelAtSend = currentModel;
           var shell = addAssistantShell(modelAtSend);
           shell.wrap.setAttribute("data-prompt", text);
-          setTimeout(function () {
-            shell.model = modelAtSend;
-            streamInto(shell, demoReply(text), function () { busy = false; autoGrow(); input.focus(); });
-          }, 700);
+          if (online) {
+            requestOnline(text, shell, null);
+          } else {
+            setTimeout(function () {
+              shell.model = modelAtSend;
+              streamInto(shell, demoReply(text), function () { busy = false; autoGrow(); input.focus(); });
+            }, 700);
+          }
         }
+
+        $("btnStop").addEventListener("click", function () {
+          if (!abortCtl) return;
+          try { abortCtl.abort(); } catch (e) { /* sudah dibatalkan */ }
+        });
 
         $("composerForm").addEventListener("submit", function (e) {
           e.preventDefault();
@@ -3899,11 +4104,16 @@
         });
 
         function newChat() {
+          if (abortCtl) {
+            try { abortCtl.abort(); } catch (e) { /* sudah dibatalkan */ }
+          }
+          chatHist = [];
           msgList.innerHTML = "";
           emptyState.classList.remove("hidden");
           $("chatTitle").textContent = window.ECHO_T("chat.title");
           input.value = "";
           busy = false;
+          btnStop.hidden = true;
           autoGrow();
           input.focus();
           toast(window.ECHO_T("toast.newChat"));
