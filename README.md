@@ -24,3 +24,16 @@ wrangler secret put REFLECTION_API_KEY
 
 Local preview of the static files: open `public/index.html` in a browser
 (the chat proxy only works on the deployed Worker).
+
+Local backend (optional, for live Beam replies without deploying):
+
+```
+REFLECTION_API_KEY=... node server.js
+```
+
+Serves `public/` at http://localhost:5173 and proxies `/api/chat` to
+Reflection Beam (model Beam-1.0-501B-A23B). Env: `REFLECTION_API_KEY`
+(required), `REFLECTION_API_BASE` (optional, default
+`https://api.reflection.ai`), `PORT` (optional, default 5173). Set the key
+in the environment when running; server.js does not read `.env` files
+itself. Never commit a real key.
