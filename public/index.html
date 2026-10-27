@@ -553,6 +553,11 @@
         background: var(--accent-soft); border: 1px solid rgba(223, 160, 95, 0.35);
         display: inline-flex; align-items: center; justify-content: center;
       }
+      /* Avatar assistant = logo branding (img dioptimalkan ke 18px). */
+      .msg-assistant .avatar img {
+        width: 18px; height: 18px; border-radius: 4px; display: block;
+        object-fit: cover;
+      }
       .msg-body {
         flex: 1; min-width: 0;
         background: var(--panel); border: 1px solid var(--line-soft);
@@ -3901,7 +3906,14 @@
           wrap.className = "msg msg-assistant";
           var avatar = document.createElement("span");
           avatar.className = "avatar";
-          avatar.innerHTML = LOGO_SMALL;
+          var brandEl = document.querySelector(".rail .logo-mark");
+          var brandSrc = brandEl && brandEl.getAttribute("src");
+          if (brandSrc) {
+            /* Logo branding echo (same source as rail logo). */
+            avatar.innerHTML = '<img alt="" aria-hidden="true" src="' + brandSrc + '">';
+          } else {
+            avatar.innerHTML = LOGO_SMALL;
+          }
           var body = document.createElement("div");
           body.className = "msg-body";
           var textEl = document.createElement("div");
@@ -6099,6 +6111,11 @@
               wrap2.className = "msg msg-assistant";
               var avatar = document.createElement("span");
               avatar.className = "avatar";
+              var brandEl3 = document.querySelector(".rail .logo-mark");
+              var brandSrc3 = brandEl3 && brandEl3.getAttribute("src");
+              if (brandSrc3) {
+                avatar.innerHTML = '<img alt="" aria-hidden="true" src="' + brandSrc3 + '">';
+              }
               var body = document.createElement("div");
               body.className = "msg-body";
               var text = document.createElement("div");
