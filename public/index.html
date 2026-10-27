@@ -372,6 +372,58 @@
         padding: 14px 0 12px; gap: 6px;
         border-right: 1px solid var(--line-soft); background: rgba(12, 17, 21, 0.82);
       }
+      /* Panel chat history: muncul di samping rail saat tombol History diklik. */
+      .history-panel {
+        position: fixed; left: 68px; top: 12px; bottom: 12px; width: 312px;
+        max-width: calc(100vw - 76px);
+        display: flex; flex-direction: column;
+        background: rgba(15, 21, 26, 0.97);
+        border: 1px solid var(--line); border-radius: var(--radius-md);
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+        z-index: 55; overflow: hidden; display: none;
+      }
+      .history-panel.on { display: flex; }
+      .history-head {
+        display: flex; align-items: center; gap: 8px;
+        padding: 12px 12px 10px; border-bottom: 1px solid var(--line-soft);
+      }
+      .history-head h3 { flex: 1; margin: 0; font-size: 13.5px; font-weight: 600; }
+      .hist-btn {
+        background: none; border: 1px solid var(--line); color: var(--ink-2);
+        border-radius: 7px; width: 30px; height: 30px;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .hist-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+      .hist-btn svg { width: 15px; height: 15px; }
+      .hist-list { flex: 1; overflow-y: auto; list-style: none; margin: 0; padding: 6px; }
+      .hist-item {
+        display: flex; align-items: center; gap: 9px; width: 100%;
+        background: none; border: 1px solid transparent; border-radius: 9px;
+        padding: 10px 10px; text-align: left; color: var(--ink); cursor: pointer;
+      }
+      .hist-item:hover { background: var(--panel-2); border-color: var(--line-soft); }
+      .hist-item .h-main { flex: 1; min-width: 0; }
+      .hist-item .h-title {
+        font-size: 13px; font-weight: 600; white-space: nowrap;
+        overflow: hidden; text-overflow: ellipsis;
+      }
+      .hist-item .h-meta {
+        font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .hist-item .h-cloud { color: var(--sage); flex: none; }
+      .hist-item .h-del {
+        flex: none; background: none; border: none; color: var(--ink-3);
+        width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .hist-item .h-del:hover { background: rgba(217, 119, 109, 0.16); color: var(--danger); }
+      .hist-item .h-del svg { width: 14px; height: 14px; }
+      .hist-empty { padding: 24px 14px; text-align: center; color: var(--ink-3); font-size: 13px; }
+      .hist-foot {
+        padding: 9px 12px; border-top: 1px solid var(--line-soft);
+        font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-3);
+      }
       .rail .logo-btn {
         background: rgba(16, 17, 19, 0.8); border: 1px solid var(--line);
         padding: 5px; border-radius: var(--radius-md); margin-bottom: 10px;
@@ -1632,7 +1684,7 @@
           <button class="rail-btn" type="button" data-soon="Conversation search isn't available yet." data-i18n-attr="data-soon:soon.search;title:rail.searchTitle;aria-label:rail.searchAria" title="Search" aria-label="Search conversations">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3.8-3.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </button>
-          <button class="rail-btn" type="button" data-soon="Conversation history isn't saved yet." data-i18n-attr="data-soon:soon.history;title:rail.histTitle;aria-label:rail.histAria" title="History" aria-label="Conversation history">
+          <button class="rail-btn" id="railHistory" type="button" data-i18n-attr="title:rail.histTitle;aria-label:rail.histAria" title="History" aria-label="Conversation history" aria-haspopup="dialog" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 1 2.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M3.5 12H7m-3.5 0 1.8-2.7M12 7.5V12l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div class="rail-spacer"></div>
@@ -1725,6 +1777,19 @@
             </div>
           </div>
         </div>
+      </div>
+      <div class="history-panel" id="historyPanel" role="dialog" aria-label="Conversation history">
+        <div class="history-head">
+          <h3 id="histTitle">History</h3>
+          <button class="hist-btn" id="histRefresh" type="button" title="Refresh / sync" aria-label="Refresh history">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 3v4h-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="hist-btn" id="histClose" type="button" title="Close" aria-label="Close history">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <ul class="hist-list" id="histList"></ul>
+        <div class="hist-foot" id="histFoot">Local storage</div>
       </div>
     </section>
 
@@ -5713,6 +5778,317 @@
         }
         window.requestAnimationFrame(tick);
       })();
+    </script>
+
+    <script>
+    /* =====================================================================
+       Chat history — hybrid storage:
+       - localStorage ("echo-history-v1") untuk semua user, auto-save dari
+         MutationObserver pada #msgList (debounce 900ms setelah UI diam).
+       - Server sync via /api/history HANYA saat wallet connected
+         (x-echo-wallet = identitas kuota yang sama). Restore di device
+         baru: server-first (list server digabung di atas list lokal).
+       - Cap: 40 conv di localStorage, 40 message/8K char server-side.
+       Panel dibuka dari tombol rail History.
+       ===================================================================== */
+    (function () {
+      "use strict";
+      var $ = function (id) { return document.getElementById(id); };
+      var panel = $("historyPanel");
+      var listEl = $("histList");
+      var footEl = $("histFoot");
+      var railBtn = $("railHistory");
+      var msgList = $("msgList");
+      if (!panel || !listEl || !footEl || !railBtn || !msgList) return;
+
+      var LS_KEY = "echo-history-v1";
+      var LS_KEEP = 40;
+      var current = { id: null, title: "", createdAt: 0 };
+
+      function loadAll() {
+        try {
+          var v = JSON.parse(localStorage.getItem(LS_KEY) || "{}");
+          return v || {};
+        } catch (e) { return {}; }
+      }
+      function saveAll(store) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(store)); } catch (e) { /* full */ }
+      }
+      function newId() {
+        try { return crypto.randomUUID(); }
+        catch (e) {
+          return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+        }
+      }
+
+      // ---- kumpulkan pesan dari DOM (mirror collectHistory) ----
+      function collectFromDOM() {
+        var out = [];
+        for (var i = 0; i < msgList.children.length; i++) {
+          var w = msgList.children[i];
+          var role = w.classList.contains("msg-user") ? "user"
+            : (w.classList.contains("msg-assistant") ? "assistant" : null);
+          if (!role) continue;
+          var t = role === "user" ? w.querySelector(".bubble") : w.querySelector(".msg-text");
+          var content = t ? t.textContent : "";
+          if (!content) continue;
+          var rec = { role: role, content: content };
+          if (role === "assistant" && w._reasoningContent) rec.reasoning_content = w._reasoningContent;
+          out.push(rec);
+        }
+        return out;
+      }
+
+      var pushTimer = 0;
+      function syncServer(conv) {
+        var w = window.ECHO_WALLET;
+        if (!w) return;
+        clearTimeout(pushTimer);
+        pushTimer = setTimeout(function () {
+          fetch("/api/history/" + conv.id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", "x-echo-wallet": w },
+            body: JSON.stringify({
+              title: conv.title,
+              model: conv.model,
+              createdAt: conv.createdAt,
+              messages: conv.messages
+            })
+          }).catch(function () { /* silent */ });
+        }, 1500);
+      }
+
+      function persist() {
+        var msgs = collectFromDOM();
+        if (!msgs.length) return;
+        var store = loadAll();
+        var convs = store.convs || (store.convs = {});
+        var defaultTitle = window.ECHO_T ? window.ECHO_T("chat.title") : "New conversation";
+        var title = $("chatTitle").textContent;
+        if (!title || title === defaultTitle) title = msgs[0].content.slice(0, 60) || "Conversation";
+        var conv = {
+          id: current.id || (current.id = newId()),
+          title: title.slice(0, 80),
+          model: "Beam",
+          createdAt: current.createdAt || (current.createdAt = Date.now()),
+          updatedAt: Date.now(),
+          messages: msgs
+        };
+        convs[conv.id] = conv;
+        var ids = Object.keys(convs);
+        if (ids.length > LS_KEEP) {
+          ids.sort(function (a, b) { return (convs[a].updatedAt || 0) - (convs[b].updatedAt || 0); });
+          while (ids.length > LS_KEEP) delete convs[ids.shift()];
+        }
+        saveAll(store);
+        syncServer(conv);
+      }
+
+      var saveTimer = 0;
+      new MutationObserver(function () {
+        if (!msgList.children.length) {
+          // New chat: conv dianggap selesai, mulai id baru di chat berikutnya.
+          saveTimer = setTimeout(function () {
+            current.id = null; current.title = ""; current.createdAt = 0;
+          }, 400);
+          return;
+        }
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(persist, 900);
+      }).observe(msgList, { childList: true, characterData: true, subtree: true });
+
+      // New chat (2 tombol) biar conv id baru, bukan campur ke conv lama.
+      function resetCurrent() {
+        setTimeout(function () {
+          if (!msgList.children.length) {
+            current.id = null; current.title = ""; current.createdAt = 0;
+          }
+        }, 50);
+      }
+      $("railNewChat").addEventListener("click", resetCurrent);
+      $("btnNewChatTop").addEventListener("click", resetCurrent);
+
+      // ---- UI panel ----
+      function relTime(ts) {
+        var d = Date.now() - (ts || 0);
+        if (d < 60e3) return "now";
+        if (d < 3600e3) return Math.max(1, Math.round(d / 60e3)) + "m";
+        if (d < 86400e3) return Math.round(d / 3600e3) + "h";
+        return Math.round(d / 86400e3) + "d";
+      }
+      var HIST_LOGO = '<svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M8 6h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H22l-9.2 7.4c-.9.7-2.3.1-2.3-1.1V38H8a6 6 0 0 1-6-6V12A6 6 0 0 1 8 6Z" fill="#dfa05f"/><rect x="13" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/><rect x="21.7" y="14" width="4.6" height="19" rx="2.3" fill="#1a1206"/><rect x="30.4" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/></svg>';
+      var HIST_X = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+      function renderList(entries) {
+        listEl.innerHTML = "";
+        if (!entries.length) {
+          var li = document.createElement("li");
+          li.className = "hist-empty";
+          li.textContent = "No conversations yet — chats are saved automatically.";
+          listEl.appendChild(li);
+          return;
+        }
+        entries.forEach(function (e) {
+          var li = document.createElement("li");
+          li.className = "hist-item";
+          li.setAttribute("role", "button");
+          li.tabIndex = 0;
+          li.onclick = function () { restoreConv(e); };
+          li.onkeydown = function (ev) { if (ev.key === "Enter") restoreConv(e); };
+          if (e.source === "server") {
+            var cloud = document.createElement("span");
+            cloud.className = "h-cloud";
+            cloud.title = "Synced from server";
+            cloud.textContent = "☁";
+            li.appendChild(cloud);
+          }
+          var main = document.createElement("span");
+          main.className = "h-main";
+          var t = document.createElement("div");
+          t.className = "h-title";
+          t.textContent = e.title || "Conversation";
+          var m = document.createElement("div");
+          m.className = "h-meta";
+          m.textContent = relTime(e.updatedAt) + " · " + (e.count || 0) + " msgs · " + (e.source === "server" ? "server" : "local");
+          main.appendChild(t);
+          main.appendChild(m);
+          li.appendChild(main);
+          var del = document.createElement("button");
+          del.className = "h-del";
+          del.type = "button";
+          del.title = "Delete conversation";
+          del.setAttribute("aria-label", "Delete conversation");
+          del.innerHTML = HIST_X;
+          del.onclick = function (ev) { ev.stopPropagation(); removeConv(e.id); };
+          li.appendChild(del);
+          listEl.appendChild(li);
+        });
+      }
+
+      function removeConv(id) {
+        var store = loadAll();
+        if (store.convs && store.convs[id]) { delete store.convs[id]; saveAll(store); }
+        var w = window.ECHO_WALLET;
+        if (w) {
+          fetch("/api/history/" + id, { method: "DELETE", headers: { "x-echo-wallet": w } })
+            .catch(function () { /* silent */ });
+        }
+        openAndRender();
+      }
+
+      function restoreConv(e) {
+        function paint(conv) {
+          if (!conv) return;
+          current.id = conv.id;
+          current.title = conv.title || "";
+          current.createdAt = conv.createdAt || Date.now();
+          msgList.innerHTML = "";
+          var lastUser = "";
+          (conv.messages || []).forEach(function (m) {
+            var wrap = document.createElement("div");
+            wrap.className = m.role === "user" ? "msg msg-user" : "msg msg-assistant";
+            if (m.role === "user") {
+              var b = document.createElement("div");
+              b.className = "bubble";
+              b.textContent = m.content;
+              wrap.appendChild(b);
+              lastUser = m.content;
+            } else {
+              var avatar = document.createElement("span");
+              avatar.className = "avatar";
+              avatar.innerHTML = HIST_LOGO;
+              var body = document.createElement("div");
+              body.className = "msg-body";
+              var text = document.createElement("div");
+              text.className = "msg-text";
+              text.textContent = m.content;
+              var meta = document.createElement("div");
+              meta.className = "msg-meta hidden";
+              body.appendChild(text);
+              body.appendChild(meta);
+              wrap.appendChild(avatar);
+              wrap.appendChild(body);
+              if (m.reasoning_content) wrap._reasoningContent = m.reasoning_content;
+              wrap.setAttribute("data-prompt", lastUser);
+            }
+            msgList.appendChild(wrap);
+          });
+          $("chatTitle").textContent = conv.title || (window.ECHO_T ? window.ECHO_T("chat.title") : "New conversation");
+          close();
+          $("chatScroll").scrollTop = $('chatScroll').scrollHeight;
+        }
+        close();
+        var store = loadAll();
+        var conv = store.convs && store.convs[e.id];
+        if (conv) return paint(conv);
+        var w = window.ECHO_WALLET;
+        if (!w) return;
+        fetch("/api/history/" + e.id, { headers: { "x-echo-wallet": w } })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error("not found")); })
+          .then(paint)
+          .catch(function () { /* silent */ });
+      }
+
+      function openAndRender() {
+        panel.classList.add("on");
+        railBtn.setAttribute("aria-expanded", "true");
+        var entries = [];
+        var store = loadAll();
+        var convs = store.convs || {};
+        Object.keys(convs).forEach(function (id) {
+          var c = convs[id];
+          entries.push({
+            id: id,
+            title: c.title,
+            updatedAt: c.updatedAt || 0,
+            count: (c.messages || []).length,
+            source: "local"
+          });
+        });
+        entries.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+        renderList(entries);
+        var w = window.ECHO_WALLET;
+        footEl.textContent = w ? "Local + server sync — refreshing…" : "Local storage (this browser)";
+        if (!w) return;
+        fetch("/api/history", { headers: { "x-echo-wallet": w } })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !Array.isArray(d.items)) {
+              footEl.textContent = w ? "Local + server sync unavailable" : footEl.textContent;
+              return;
+            }
+            var seen = {};
+            entries.forEach(function (e) { seen[e.id] = 1; });
+            var extras = [];
+            d.items.forEach(function (it) {
+              if (!seen[it.id]) extras.push({
+                id: it.id, title: it.title, updatedAt: it.updatedAt,
+                count: it.count || 0, source: "server"
+              });
+            });
+            if (extras.length) renderList(extras.concat(entries));
+            footEl.textContent = "Local + server sync (" +
+              (extras.length ? "+" + extras.length + " from server" : "in sync") + ")";
+          })
+          .catch(function () {
+            footEl.textContent = "Local + server sync unavailable";
+          });
+      }
+      function close() {
+        panel.classList.remove("on");
+        railBtn.setAttribute("aria-expanded", "false");
+      }
+
+      railBtn.addEventListener("click", function () {
+        if (panel.classList.contains("on")) close();
+        else openAndRender();
+      });
+      $("histClose").addEventListener("click", close);
+      $("histRefresh").addEventListener("click", openAndRender);
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape") close();
+      });
+    })();
     </script>
 
     <script>
