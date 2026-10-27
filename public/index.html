@@ -291,6 +291,7 @@
         padding: 4px 26px 6px; text-align: center;
         display: flex; flex-direction: column; align-items: center;
       }
+      .model-card.planned { opacity: 0.55; }
       .model-card h3 { margin: 0 0 6px; font-size: 19px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; text-align: center; }
       .model-card p { margin: 10px auto 22px; color: var(--ink-2); font-size: 14.5px; text-align: center; }
       .model-card .card-link { margin-top: auto; }
@@ -1549,6 +1550,16 @@
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 12h15m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </a>
             </article>
+            <article class="model-card planned">
+              <h3>Model 2 <span class="placeholder-tag" data-i18n="badge.placeholder">Coming soon</span></h3>
+              <span class="model-speed" data-i18n="model.slot.speed">coming soon</span>
+              <p data-i18n="model.slot.desc">Reserved. This slot fills in only when a second model actually answers through the API — no fictional specs until then.</p>
+            </article>
+            <article class="model-card planned">
+              <h3>Model 3 <span class="placeholder-tag" data-i18n="badge.placeholder">Coming soon</span></h3>
+              <span class="model-speed" data-i18n="model.slot.speed">coming soon</span>
+              <p data-i18n="model.slot.desc2">Reserved. Same rule as above: connected and verified first, announced after.</p>
+            </article>
           </div>
           <p class="sec-note" data-i18n="models.note">More models are planned — slots will be added here once they are actually connected, with the same honesty rules: no fictional entries.</p>
         </section>
@@ -2720,7 +2731,11 @@
             "price.rateNote": "1 kredit = 1 juta token · konversi live: 10 kredit = $1 di stablecoin (USDC · Base / USDG · Robinhood Chain)",
             "cta.title": "Ngobrol dengan Beam, <span class=\"hl\">beneran.</span>",
             "cta.desc": "Modelnya live — kirim pesan dan model reasoning 501B menjawab saat itu juga, reasoning-nya terlihat di panel Thinking. Kamu dapat 2 kredit gratis per hari; sambungkan wallet kalau mau portabilitas dan top-up crypto.",
-            "footer.brandDesc": "AI chat dengan model reasoning live, identitas wallet opsional, dan metering kredit transparan — dibayar crypto saat kamu scale up."
+            "footer.brandDesc": "AI chat dengan model reasoning live, identitas wallet opsional, dan metering kredit transparan — dibayar crypto saat kamu scale up.",
+            "badge.soon": "Segera hadir",
+            "model.slot.speed": "segera",
+            "model.slot.desc": "Dicadangkan. Slot ini terisi hanya saat model kedua benar-benar menjawab lewat API — tanpa spesifikasi fiktif sebelum itu.",
+            "model.slot.desc2": "Dicadangkan. Aturan sama: tersambung dan terverifikasi dulu, diumumkan belakangan."
           },
           ru: {
             "nav.aria": "Навигация по главной",
@@ -2999,7 +3014,11 @@
             "price.rateNote": "1 кредит = 1 млн токенов · живой курс: 10 кредитов = $1 в стейблкоинах (USDC · Base / USDG · Robinhood Chain)",
             "cta.title": "Поговорите с Beam, <span class=\"hl\">по-настоящему.</span>",
             "cta.desc": "Модель живая — отправьте сообщение, и рассуждающая модель на 501 млрд параметров ответит прямо сейчас, а её рассуждения видны в панели Thinking. Вы получаете 2 бесплатных кредита в день; подключите кошелёк, если хотите переносимость и крипто-пополнения.",
-            "footer.brandDesc": "AI-чат с живой рассуждающей моделью, необязательной личностью кошелька и прозрачным учётом кредитов — платите в крипте, когда масштабируетесь."
+            "footer.brandDesc": "AI-чат с живой рассуждающей моделью, необязательной личностью кошелька и прозрачным учётом кредитов — платите в крипте, когда масштабируетесь.",
+            "badge.soon": "Скоро",
+            "model.slot.speed": "скоро",
+            "model.slot.desc": "Зарезервировано. Слот заполнится, только когда вторая модель реально начнёт отвечать через API — без выдуманных характеристик до тех пор.",
+            "model.slot.desc2": "Зарезервировано. То же правило: сначала подключить и проверить, потом объявить."
           },
           es: {
             "nav.aria": "Navegación principal",
@@ -3278,7 +3297,11 @@
             "price.rateNote": "1 crédito = 1 millón de tokens · tasa en vivo: 10 créditos = $1 en stablecoins (USDC · Base / USDG · Robinhood Chain)",
             "cta.title": "Habla con Beam, <span class=\"hl\">de verdad.</span>",
             "cta.desc": "El modelo está en vivo — envía un mensaje y un modelo de razonamiento de 501B responde ahora mismo, con su razonamiento visible en el panel Thinking. Recibes 2 créditos gratis al día; conecta una wallet si quieres portabilidad y recargas cripto.",
-            "footer.brandDesc": "Chat con IA y un modelo de razonamiento en vivo, identidad opcional por wallet y medición transparente de créditos — cripto cuando escalas."
+            "footer.brandDesc": "Chat con IA y un modelo de razonamiento en vivo, identidad opcional por wallet y medición transparente de créditos — cripto cuando escalas.",
+            "badge.soon": "Próximamente",
+            "model.slot.speed": "próximamente",
+            "model.slot.desc": "Reservado. Este espacio se ocupa sólo cuando un segundo modelo responda de verdad por la API — sin especificaciones ficticias hasta entonces.",
+            "model.slot.desc2": "Reservado. La misma regla: conectado y verificado primero, anunciado después."
           },
           fr: {
             "nav.aria": "Navigation de l'accueil",
@@ -3557,7 +3580,11 @@
             "price.rateNote": "1 crédit = 1 million de tokens · taux en direct : 10 crédits = $1 en stablecoins (USDC · Base / USDG · Robinhood Chain)",
             "cta.title": "Parlez à Beam, <span class=\"hl\">pour de vrai.</span>",
             "cta.desc": "Le modèle est en direct — envoyez un message et un modèle de raisonnement à 501B répond sur-le-champ, son raisonnement visible dans le panneau Thinking. Vous recevez 2 crédits gratuits par jour ; connectez un wallet pour la portabilité et les recharges crypto.",
-            "footer.brandDesc": "Chat IA avec un modèle de raisonnement en direct, identité wallet optionnelle et mesure transparente des crédits — payé en crypto quand vous montez en charge."
+            "footer.brandDesc": "Chat IA avec un modèle de raisonnement en direct, identité wallet optionnelle et mesure transparente des crédits — payé en crypto quand vous montez en charge.",
+            "badge.soon": "Bientôt",
+            "model.slot.speed": "bientôt",
+            "model.slot.desc": "Réservé. Cet emplacement se remplira uniquement lorsqu'un second modèle répondra réellement via l'API — aucune spécification fictive d'ici là.",
+            "model.slot.desc2": "Réservé. Même règle : connecté et vérifié d'abord, annoncé ensuite."
           },
           de: {
             "nav.aria": "Startseiten-Navigation",
@@ -3836,7 +3863,11 @@
             "price.rateNote": "1 Credit = 1 Mio. Tokens · Live-Kurs: 10 Credits = $1 in Stablecoins (USDC · Base / USDG · Robinhood Chain)",
             "cta.title": "Sprich mit Beam, <span class=\"hl\">wirklich.</span>",
             "cta.desc": "Das Modell lebt — schick eine Nachricht, und ein Reasoning-Modell mit 501B Parametern antwortet jetzt, sein Denken sichtbar im Thinking-Panel. Du bekommst 2 Gratis-Credits pro Tag; verbinde ein Wallet für Portabilität und Krypto-Aufladungen.",
-            "footer.brandDesc": "AI-Chat mit einem Live-Reasoning-Modell, optionaler Wallet-Identität und transparentem Credit-Metering — in Krypto bezahlt, wenn du skalierst."
+            "footer.brandDesc": "AI-Chat mit einem Live-Reasoning-Modell, optionaler Wallet-Identität und transparentem Credit-Metering — in Krypto bezahlt, wenn du skalierst.",
+            "badge.soon": "Demnächst",
+            "model.slot.speed": "demnächst",
+            "model.slot.desc": "Reserviert. Dieser Slot wird erst gefüllt, wenn ein zweites Modell wirklich über die API antwortet — bis dahin keine erfundenen Specs.",
+            "model.slot.desc2": "Reserviert. Gleiche Regel: erst verbunden und verifiziert, dann angekündigt."
           }
         };
 
