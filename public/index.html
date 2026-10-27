@@ -578,6 +578,28 @@
       .meta-btn svg { width: 15px; height: 15px; }
       .meta-btn.copied { color: var(--sage); }
 
+      /* Thinking: collapsible reasoning AI di atas jawaban */
+      .think-toggle {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: none; border: none; border-bottom: 1px solid rgba(223, 160, 95, 0.35);
+        color: var(--ink-2); cursor: pointer;
+        font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+        padding: 0 10px 7px 0;
+      }
+      .think-toggle:hover { color: var(--ink); }
+      .think-toggle svg {
+        width: 12px; height: 12px; flex: none; position: relative; top: 1px;
+        transition: transform 0.15s ease;
+      }
+      .think-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+      .think-body {
+        font-size: 12.5px; line-height: 1.55; color: var(--ink-3);
+        border-left: 2px solid rgba(223, 160, 95, 0.45);
+        padding: 2px 0 2px 10px; margin: 10px 0 12px;
+        white-space: pre-wrap; word-break: break-word;
+      }
+      .think-body.hidden { display: none; }
+
       .typing { display: inline-flex; gap: 5px; padding: 6px 0; }
       .typing i {
         width: 7px; height: 7px; border-radius: 50%; background: var(--ink-3);
@@ -2200,6 +2222,7 @@
         var STR = {
           en: {
             "hud.dist": "DIST",
+            "chat.think": "Thinking",
             "chat.typing": "Typing",
             "chat.copy": "Copy answer",
             "chat.regen": "Regenerate answer",
@@ -2225,6 +2248,7 @@
           },
           id: {
             "hud.dist": "JARAK",
+            "chat.think": "Thinking",
             "chat.typing": "Sedang mengetik",
             "chat.copy": "Salin jawaban",
             "chat.regen": "Buat ulang jawaban",
@@ -3931,8 +3955,43 @@
           }
         }
 
+        /* Thinking (reasoning): collapsible di atas jawaban. Dipasang saat
+           streamInto mulai (live reply) dan saat restore history; regen
+           muat ulang isi reasoning pada bubble yang sama. */
+        var THINK_CHEV = '<svg viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+        function attachThinking(shell, reasoning) {
+          if (!reasoning) return;
+          if (!shell.think) {
+            var box = document.createElement("div");
+            box.className = "msg-think";
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "think-toggle";
+            btn.setAttribute("aria-expanded", "false");
+            var lab = document.createElement("span");
+            lab.textContent = window.ECHO_T("chat.think");
+            btn.appendChild(lab);
+            btn.insertAdjacentHTML("beforeend", THINK_CHEV);
+            var content = document.createElement("div");
+            content.className = "think-body hidden";
+            content.textContent = reasoning;
+            btn.onclick = function () {
+              var open = btn.getAttribute("aria-expanded") === "true";
+              btn.setAttribute("aria-expanded", open ? "false" : "true");
+              content.classList.toggle("hidden", open);
+            };
+            box.appendChild(btn);
+            box.appendChild(content);
+            shell.textEl.parentNode.insertBefore(box, shell.textEl);
+            shell.think = content;
+          } else {
+            shell.think.textContent = reasoning;
+          }
+        }
+
         function streamInto(shell, fullText, onDone) {
           shell.fullText = fullText;
+          attachThinking(shell, shell.wrap._reasoningContent);
           if (reduceMotion) {
             shell.textEl.textContent = fullText;
             finishShell(shell);
@@ -4010,6 +4069,7 @@
           if (prompt) shell.wrap.setAttribute("data-prompt", prompt);
           shell.fullText = content || "";
           shell.textEl.textContent = shell.fullText;
+          attachThinking(shell, shell.wrap._reasoningContent);
           finishShell(shell);
         };
 
