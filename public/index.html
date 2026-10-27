@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -37,9 +37,13 @@
         --danger: #d9776d;
         --radius-lg: 22px;
         --radius-md: 14px;
-        --font-body: "Cascadia Code", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
-        --font-display: "Cascadia Code", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
-        --font-mono: "Cascadia Code", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
+        /* Vercel-stack typography:
+           body & display = Plus Jakarta Sans; ttombol/input/label UI = Geist
+           Sans (var --font-ui); angka/kode/label teknis = Geist Mono. */
+        --font-body: "Plus Jakarta Sans", "Geist Sans", system-ui, sans-serif;
+        --font-display: "Plus Jakarta Sans", "Geist Sans", system-ui, sans-serif;
+        --font-mono: "Geist Mono", ui-monospace, Menlo, Consolas, monospace;
+        --font-ui: "Geist Sans", "Plus Jakarta Sans", system-ui, sans-serif;
       }
 
       * { box-sizing: border-box; }
@@ -65,6 +69,22 @@
       #page-home { overflow-x: clip; }
       body.view-app { overflow: hidden; }
       button { font-family: inherit; cursor: pointer; }
+      /* UI komponen pakai Geist Sans (stack Vercel): tombol, input, chips,
+         rail/topbar labels, dropdown & modal controls. */
+      button,
+      input,
+      select,
+      textarea,
+      .chip,
+      .btn,
+      .lang-btn,
+      .lang-menu button,
+      .topup-opt,
+      .pay-select,
+      .pay-input,
+      .hist-item {
+        font-family: var(--font-ui);
+      }
       a { color: inherit; }
       ::selection { background: var(--accent); color: var(--accent-ink); }
 
