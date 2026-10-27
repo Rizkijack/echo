@@ -599,14 +599,6 @@
       }
       .dash-head .sub { color: var(--ink-2); margin: 6px auto 0; max-width: 58ch; text-align: center; }
       .dash-head .spacer { display: none; }
-      .dash-demo-note {
-        display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; text-align: center;
-        border: 1px solid rgba(223, 160, 95, 0.4); background: rgba(20, 24, 20, 0.78);
-        border-radius: var(--radius-lg); padding: 12px 16px; margin: 18px 0 26px;
-        font-size: 14px; color: var(--ink-2);
-      }
-      .dash-demo-note strong { color: var(--accent); }
-      .dash-demo-note svg { flex: none; margin-top: 2px; }
 
       .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
       .stat-card {
@@ -633,23 +625,6 @@
         display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
       }
       .dash-section > p { color: var(--ink-2); margin: 0 auto 16px; max-width: 62ch; font-size: 14.5px; text-align: center; }
-
-      .usage-table { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; text-align: center; }
-      .usage-head, .usage-row {
-        display: grid; grid-template-columns: 1.4fr 0.8fr 1fr 0.9fr; gap: 10px 16px;
-        padding: 14px 22px; align-items: center; text-align: center; justify-items: center;
-      }
-      .usage-head {
-        background: rgba(12, 17, 21, 0.85); font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-        letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
-      }
-      .usage-row { background: var(--panel); font-size: 14.5px; }
-      .usage-row + .usage-row { border-top: 1px solid var(--line-soft); }
-      .usage-row .u-model { font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 9px; text-align: center; }
-      .usage-row .u-model .swatch { width: 9px; height: 9px; border-radius: 2px; flex: none; }
-      .usage-row .num { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink-2); }
-      .usage-bar { height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; margin-top: 6px; }
-      .usage-bar i { display: block; height: 100%; border-radius: 99px; }
 
       .dash-cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; align-items: start; }
       .dash-card {
@@ -993,11 +968,11 @@
       *, *::before, *::after { font-weight: 700 !important; }
       .model-speed, .stat-item .stat-num, .stat-item p,
       .price-value, .price-per, .home-footer, .stat-card .stat-label,
-      .usage-head, .kv-list .k, .placeholder-tag, .footer-col h4,
+      .kv-list .k, .placeholder-tag, .footer-col h4,
       .footer-brand p, .footer-bottom, .model-label,
       .topup-opt small, .demo-badge, .card-link, .sec-label,
       .steps .num, .feature-list .f-tag, .stats-note strong,
-      .composer-caption strong, .dash-demo-note strong, .model-tag,
+      .composer-caption strong, .model-tag,
       .stat-card .stat-sub b, .chip span, .topup-opt.selected,
       .hero h1 .hl, .cta-final h2 .hl, .brand-name em,
       .stat-card .stat-value .unit, .footer-col a .ph-tag,
@@ -1145,10 +1120,6 @@
         .dash-wrap { padding: 20px 16px 56px; }
         .stat-grid { grid-template-columns: 1fr; }
         .dash-cols { grid-template-columns: 1fr; }
-        .usage-head, .usage-row { grid-template-columns: 1.25fr 0.55fr 1fr 0.85fr; gap: 6px 10px; padding: 12px 14px; }
-        .usage-head { font-size: 9.5px; }
-        .usage-row { font-size: 13px; }
-        .usage-row .num { font-size: 12px; }
         .feature-list { grid-template-columns: 1fr; }
         .stats-row { grid-template-columns: 1fr; gap: 4px; }
         .stat-item .stat-num { font-size: 32px; }
@@ -1814,11 +1785,6 @@
               <a class="btn btn-primary" href="#/app" style="padding: 10px 18px; font-size: 14px;" data-i18n="dash.toApp">Go to the chat app</a>
             </div>
 
-            <div class="dash-demo-note" role="note">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#dfa05f" stroke-width="1.8"/><path d="M12 11v5" stroke="#dfa05f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="8" r="1.3" fill="#dfa05f"/></svg>
-              <span data-i18n-html="dash.note"><strong>Every number on this page is sample data for the UI.</strong> The balance, chat count, and usage below are not real account data — no backend, account, or payment system is connected yet.</span>
-            </div>
-
             <!-- Ringkasan -->
             <div class="stat-grid">
               <article class="stat-card">
@@ -1846,35 +1812,6 @@
                 <p class="stat-sub" data-i18n="stat.tokens.sub">Sample data — an average of 5.430 tokens per chat, 30.670 credits used in total.</p>
               </article>
             </div>
-
-            <!-- Pemakaian per model -->
-            <section class="dash-section" aria-labelledby="usageTitle">
-              <h2 id="usageTitle" data-i18n="usage.title">Usage per model <span class="demo-badge" data-i18n="badge.sampleData">Sample data</span></h2>
-              <p data-i18n="usage.desc">Breakdown of chats, tokens, and credits used for each model during the current month (sample numbers).</p>
-              <div class="usage-table" role="table" data-i18n-attr="aria-label:usage.aria" aria-label="Usage per model (sample data)">
-                <div class="usage-head" role="row">
-                  <span data-i18n="usage.headModel">Model</span><span data-i18n="usage.headChat">Chats</span><span data-i18n="usage.headToken">Tokens</span><span data-i18n="usage.headCredits">Credits</span>
-                </div>
-                <div class="usage-row" role="row">
-                  <span class="u-model"><span class="swatch" style="background:#dfa05f"></span>echo Pro</span>
-                  <span class="num">96</span>
-                  <span><span class="num" data-i18n="usage.tok1">812K</span><span class="usage-bar"><i style="width:62%; background:#dfa05f"></i></span></span>
-                  <span class="num">18.400</span>
-                </div>
-                <div class="usage-row" role="row">
-                  <span class="u-model"><span class="swatch" style="background:#93b8a4"></span>echo Fast</span>
-                  <span class="num">158</span>
-                  <span><span class="num" data-i18n="usage.tok2">704K</span><span class="usage-bar"><i style="width:54%; background:#93b8a4"></i></span></span>
-                  <span class="num">9.860</span>
-                </div>
-                <div class="usage-row" role="row">
-                  <span class="u-model"><span class="swatch" style="background:#7d8ea3"></span>echo Mini</span>
-                  <span class="num">88</span>
-                  <span><span class="num" data-i18n="usage.tok3">344K</span><span class="usage-bar"><i style="width:26%; background:#7d8ea3"></i></span></span>
-                  <span class="num">2.410</span>
-                </div>
-              </div>
-            </section>
 
             <!-- Top-up & Backup -->
             <section class="dash-section">
