@@ -5899,6 +5899,10 @@
       new MutationObserver(function () {
         if (!msgList.children.length) {
           // New chat: conv dianggap selesai, mulai id baru di chat berikutnya.
+          // Batalkan persist yang masih tertunda dulu: tanpa ini, timer
+          // persist lama bisa menyala setelah DOM dikosongkan/diisi ulang
+          // dan menyimpan snapshot DOM saat itu di bawah id yang salah.
+          clearTimeout(saveTimer);
           saveTimer = setTimeout(function () {
             current.id = null; current.title = ""; current.createdAt = 0;
           }, 400);
@@ -5987,12 +5991,25 @@
       }
 
       function restoreConv(e) {
+        // Simpan dulu chat yang sedang tampil sebelum DOM dikosongkan.
+        // persist() normalnya jalan 900ms setelah DOM diam (debounce), jadi
+        // chat baru yang pesannya belum tersimpan akan hilang kalau langsung
+        // ditimpa history lama — apalagi kalau history yang di-load cuma
+        // berisi 1-2 pesan: tampilannya mirip new chat bersih, padahal
+        // sesi yang aktif sudah berganti ke id history lama.
+        clearTimeout(saveTimer); saveTimer = 0;
+        persist();
         function paint(conv) {
           if (!conv) return;
           current.id = conv.id;
           current.title = conv.title || "";
           current.createdAt = conv.createdAt || Date.now();
           msgList.innerHTML = "";
+          // Sembunyikan hero new-chat saat menampilkan history: tanpa ini,
+          // history dengan sedikit pesan tampil di bawah hero dan terlihat
+          // seperti sesi new chat, lalu pesan lanjutan menumpuk ke id lama.
+          var emptyState = $("emptyState");
+          if (emptyState) emptyState.classList.toggle("hidden", (conv.messages || []).length > 0);
           var lastUser = "";
           (conv.messages || []).forEach(function (m) {
             if (m.role === "user") {
