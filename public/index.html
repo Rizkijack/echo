@@ -3998,6 +3998,17 @@
           });
         }
 
+        /* Expose untuk chat-history module: buat bubble assistant lengkap
+           dengan tombol copy/regen yang aktif (dipakai saat restore). */
+        window.ECHO_RESTORE_ASSISTANT = function (content, reasoning, prompt) {
+          var shell = addAssistantShell("Beam");
+          shell.wrap._reasoningContent = (typeof reasoning === "string") ? reasoning : "";
+          if (prompt) shell.wrap.setAttribute("data-prompt", prompt);
+          shell.fullText = content || "";
+          shell.textEl.textContent = shell.fullText;
+          finishShell(shell);
+        };
+
         $("composerForm").addEventListener("submit", function (e) {
           e.preventDefault();
           var v = input.value.trim();
@@ -5916,7 +5927,6 @@
         if (d < 86400e3) return Math.round(d / 3600e3) + "h";
         return Math.round(d / 86400e3) + "d";
       }
-      var HIST_LOGO = '<svg width="16" height="16" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M8 6h32a6 6 0 0 1 6 6v20a6 6 0 0 1-6 6H22l-9.2 7.4c-.9.7-2.3.1-2.3-1.1V38H8a6 6 0 0 1-6-6V12A6 6 0 0 1 8 6Z" fill="#dfa05f"/><rect x="13" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/><rect x="21.7" y="14" width="4.6" height="19" rx="2.3" fill="#1a1206"/><rect x="30.4" y="19" width="4.6" height="9" rx="2.3" fill="#1a1206"/></svg>';
       var HIST_X = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
       function renderList(entries) {
@@ -5985,18 +5995,25 @@
           msgList.innerHTML = "";
           var lastUser = "";
           (conv.messages || []).forEach(function (m) {
-            var wrap = document.createElement("div");
-            wrap.className = m.role === "user" ? "msg msg-user" : "msg msg-assistant";
             if (m.role === "user") {
+              var wrap = document.createElement("div");
+              wrap.className = "msg msg-user";
               var b = document.createElement("div");
               b.className = "bubble";
               b.textContent = m.content;
               wrap.appendChild(b);
+              msgList.appendChild(wrap);
               lastUser = m.content;
+            } else if (window.ECHO_RESTORE_ASSISTANT) {
+              // Bubble lengkap: copy + regen aktif, reasoning_content &
+              // data-prompt terpasang (multi-turn Beam tetap benar).
+              window.ECHO_RESTORE_ASSISTANT(m.content, m.reasoning_content || "", lastUser);
             } else {
+              // Fallback bila factory tidak tersedia.
+              var wrap2 = document.createElement("div");
+              wrap2.className = "msg msg-assistant";
               var avatar = document.createElement("span");
               avatar.className = "avatar";
-              avatar.innerHTML = HIST_LOGO;
               var body = document.createElement("div");
               body.className = "msg-body";
               var text = document.createElement("div");
@@ -6006,12 +6023,12 @@
               meta.className = "msg-meta hidden";
               body.appendChild(text);
               body.appendChild(meta);
-              wrap.appendChild(avatar);
-              wrap.appendChild(body);
-              if (m.reasoning_content) wrap._reasoningContent = m.reasoning_content;
-              wrap.setAttribute("data-prompt", lastUser);
+              wrap2.appendChild(avatar);
+              wrap2.appendChild(body);
+              if (m.reasoning_content) wrap2._reasoningContent = m.reasoning_content;
+              wrap2.setAttribute("data-prompt", lastUser);
+              msgList.appendChild(wrap2);
             }
-            msgList.appendChild(wrap);
           });
           $("chatTitle").textContent = conv.title || (window.ECHO_T ? window.ECHO_T("chat.title") : "New conversation");
           close();
