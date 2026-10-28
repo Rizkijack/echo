@@ -61,3 +61,6 @@ fresh conversations always work). `stream:true` is not supported yet.
 Billing: requests bill the key owner's wallet quota — the free daily
 2 credits (2M tokens) first, then purchased bonus credits, exactly like
 chat in the app. CORS is open, so browser clients work too.
+
+Revocation is eventually consistent (KV): a revoked key can keep working
+for up to ~60s globally before the delete propagates to all edges.
