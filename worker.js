@@ -66,13 +66,15 @@ function rateLimited(ip) {
 // (400 missing_required_parameter). Assistant turns without one (pre-fix
 // chats, simulated fallbacks) are dropped so the conversation can recover
 // instead of failing forever.
-function cleanMessages(input) {
+function cleanMessages(input, keepSystem) {
   if (!Array.isArray(input)) return [];
   const out = [];
   for (const m of input) {
     if (!m || typeof m.content !== "string") continue;
     if (m.role === "user") {
       out.push({ role: "user", content: m.content.slice(0, 4000) });
+    } else if (keepSystem && m.role === "system") {
+      out.push({ role: "system", content: m.content.slice(0, 4000) });
     } else if (
       m.role === "assistant" &&
       typeof m.reasoning_content === "string" &&
@@ -534,6 +536,221 @@ async function handleHistoryDelete(request, env, convId, url) {
   return jsonResponse({ ok: true }, 200);
 }
 
+// ---------- API keys (OpenAI-compatible public API) ----------
+// Key milik wallet: blob keys:<wallet> = {keys:[{k,n,c,u}]} (cap 10) +
+// lookup O(1) k:<key> = {w: wallet}. Pemakaian lewat /v1 memotong kuota
+// wallet (w:<wallet>) yang sama dengan app chat: free harian dulu, lalu bonus.
+const KEYS_PER_WALLET = 10;
+
+function keysIndexKey(wallet) {
+  return "keys:" + wallet;
+}
+function keyLookupKey(key) {
+  return "k:" + key;
+}
+function genApiKey() {
+  const b = new Uint8Array(20);
+  crypto.getRandomValues(b);
+  return "ek_" + [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+async function readKeysIndex(env, wallet) {
+  let rec;
+  try {
+    rec = await env.KEYS.get(keysIndexKey(wallet), "json");
+  } catch {
+    rec = null;
+  }
+  return Array.isArray(rec && rec.keys) ? rec.keys : [];
+}
+
+function maskedKey(key) {
+  return key.slice(0, 7) + "…" + key.slice(-4);
+}
+
+async function handleKeys(request, env) {
+  if (!env.KEYS) return jsonResponse({ error: "Key storage not configured" }, 503);
+  const wallet = walletIdentity(request);
+  if (!wallet) return jsonResponse({ error: "Connect a wallet in the app first" }, 401);
+  const keys = await readKeysIndex(env, wallet);
+  if (request.method === "GET") {
+    return jsonResponse(
+      {
+        keys: keys.map(({ k, n, c, u }) => ({
+          key_masked: maskedKey(k),
+          name: n,
+          created: c,
+          last_used: u || null,
+        })),
+      },
+      200
+    );
+  }
+  if (request.method === "POST") {
+    if (keys.length >= KEYS_PER_WALLET) {
+      return jsonResponse({ error: "Key limit reached (" + KEYS_PER_WALLET + "). Revoke one first." }, 400);
+    }
+    let name = "";
+    try {
+      const b = await request.json();
+      name = String((b && b.name) || "").trim().slice(0, 40);
+    } catch {
+      // name kosong cukup
+    }
+    const key = genApiKey();
+    const c = new Date().toISOString().slice(0, 10);
+    keys.push({ k: key, n: name, c, u: c });
+    try {
+      await env.KEYS.put(keysIndexKey(wallet), JSON.stringify({ keys }));
+      await env.KEYS.put(keyLookupKey(key), JSON.stringify({ w: wallet }));
+    } catch {
+      return jsonResponse({ error: "Key storage write failed" }, 503);
+    }
+    return jsonResponse({ key, name, created: c }, 201);
+  }
+  if (request.method === "DELETE") {
+    let target = "";
+    try {
+      const b = await request.json();
+      target = String((b && b.key) || "");
+    } catch {
+      target = "";
+    }
+    const i = keys.findIndex((e) => e.k === target || maskedKey(e.k) === target);
+    if (i < 0) return jsonResponse({ error: "Key not found" }, 404);
+    keys.splice(i, 1);
+    try {
+      await env.KEYS.put(keysIndexKey(wallet), JSON.stringify({ keys }));
+      await env.KEYS.delete(keyLookupKey(target));
+    } catch {
+      return jsonResponse({ error: "Key storage write failed" }, 503);
+    }
+    return jsonResponse({ ok: true }, 200);
+  }
+  return jsonResponse({ error: "Method not allowed" }, 405);
+}
+
+// ---------- /v1 OpenAI-compatible endpoint ----------
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
+function withCors(resp) {
+  for (const [k, v] of Object.entries(CORS_HEADERS)) resp.headers.set(k, v);
+  return resp;
+}
+
+function openAIError(message, status) {
+  return jsonResponse(
+    { error: { message, type: "invalid_request_error", code: "echo_api" } },
+    status
+  );
+}
+
+async function loadApiKeyBearer(request, env) {
+  // return {wallet, key} | null
+  const auth = (request.headers.get("Authorization") || "").trim();
+  if (!auth.startsWith("Bearer ")) return null;
+  const key = auth.slice(7).trim();
+  if (!key) return null;
+  let rec;
+  try {
+    rec = await env.KEYS.get(keyLookupKey(key), "json");
+  } catch {
+    rec = null;
+  }
+  const wallet = rec && typeof rec.w === "string" && /^0x[0-9a-f]{40}$/.test(rec.w) ? rec.w : null;
+  return wallet ? { wallet, key } : null;
+}
+
+async function handleV1Models() {
+  return jsonResponse(
+    {
+      object: "list",
+      data: [{ id: "beam", object: "model", created: 1767897600, owned_by: "echo" }],
+    },
+    200
+  );
+}
+
+async function handleV1Chat(request, env) {
+  if (request.method === "OPTIONS") {
+    return withCors(new Response(null, { status: 204, headers: { "Content-Type": "text/plain" } }));
+  }
+  if (request.method !== "POST") return openAIError("Only POST is supported", 405);
+  if (!env.KEYS) return openAIError("Key storage not configured", 503);
+  if (!env.REFLECTION_API_KEY) return openAIError("echo API is not configured", 503);
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  if (rateLimited(ip)) return openAIError("Too many requests, try again shortly", 429);
+  const auth = await loadApiKeyBearer(request, env);
+  if (!auth) {
+    return openAIError("Invalid API key. Create one on the dashboard and send it as `Authorization: Bearer ek_…`.", 401);
+  }
+  const wallet = auth.wallet;
+  const uid = "w:" + wallet;
+  const prevUsage = await readUsage(env, uid);
+  const bonusRec = await readBonus(env, wallet);
+  const totalLimit = DAILY_CREDIT_LIMIT + bonusRec.bonus;
+  if (prevUsage.enforced && prevUsage.tokens >= totalLimit) {
+    return openAIError("Credit balance exhausted. Top up with crypto on the dashboard.", 402);
+  }
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return openAIError("Request body must be JSON", 400);
+  }
+  if (body && body.stream) {
+    return openAIError("Streaming is not supported yet; use stream:false (the default).", 400);
+  }
+  const messages = cleanMessages(body && body.messages, true);
+  if (!messages.length || messages[messages.length - 1].role !== "user") {
+    return openAIError("messages must end with a user message", 400);
+  }
+  let upstream;
+  try {
+    upstream = await fetch(UPSTREAM, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.REFLECTION_API_KEY}` },
+      body: JSON.stringify({ model: MODEL, messages }),
+    });
+  } catch {
+    return openAIError("Provider error", 502);
+  }
+  if (!upstream.ok) return openAIError("Provider error", 502);
+  let data;
+  let usageTokens;
+  try {
+    data = await upstream.json();
+  } catch {
+    return openAIError("Provider error", 502);
+  }
+  if (!data || !Array.isArray(data.choices) || !data.choices.length) {
+    return openAIError("Empty provider reply", 502);
+  }
+  usageTokens =
+    data && data.usage && Number(data.usage.total_tokens)
+      ? Number(data.usage.total_tokens)
+      : Math.ceil((JSON.stringify(data).length || 0) / 4);
+  await addUsage(env, uid, usageTokens);
+  await bumpGlobalStats(env, usageTokens);
+  // last_used best-effort (satu KV write per request)
+  try {
+    await env.KEYS.put(keyLookupKey(auth.key), JSON.stringify({
+      w: wallet, u: new Date().toISOString().slice(0, 10),
+    }));
+  } catch { /* best-effort */ }
+  const overflowPrev = Math.max(0, prevUsage.tokens - DAILY_CREDIT_LIMIT);
+  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - DAILY_CREDIT_LIMIT);
+  if (overflowNow > overflowPrev) {
+    await spendBonusTokens(env, wallet, overflowNow - overflowPrev);
+  }
+  return withCors(jsonResponse(data, 200));
+}
+
 async function handleChat(request, env) {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
@@ -649,6 +866,18 @@ export default {
     }
     if (url.pathname === "/api/stats" && request.method === "GET") {
       return handleStats(request, env);
+    }
+    if (url.pathname === "/api/keys") {
+      return handleKeys(request, env);
+    }
+    if (url.pathname === "/v1/chat/completions") {
+      return withCors(await handleV1Chat(request, env));
+    }
+    if (url.pathname === "/v1/models" && (request.method === "GET" || request.method === "OPTIONS")) {
+      if (request.method === "OPTIONS") {
+        return withCors(new Response(null, { status: 204 }));
+      }
+      return withCors(await handleV1Models());
     }
     const hMatch = url.pathname.match(/^\/api\/history(?:\/([A-Za-z0-9-]+))?$/);
     if (hMatch) {

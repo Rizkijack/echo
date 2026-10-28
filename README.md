@@ -38,3 +38,26 @@ Reflection Beam (model Beam-1.0-501B-A23B). Env: `REFLECTION_API_KEY`
 in the environment when running, or put it in a `.env` file in the
 repo root — server.js loads it (simple KEY=VALUE parser, no
 dependency; pre-set environment wins). Never commit a real key.
+
+## Public API (OpenAI-compatible)
+
+Create API keys in the dashboard (`#/dashboard`, wallet must be connected).
+Keys are stored in the `KEYS` KV namespace, shown in full once at creation
+(max 10 per wallet), and revoke from the same card.
+
+Endpoint:
+
+```
+POST https://echo.0xjustshrimp.workers.dev/v1/chat/completions
+GET  https://echo.0xjustshrimp.workers.dev/v1/models
+Authorization: Bearer ek_<40 hex>
+```
+
+`/v1/chat/completions` follows the OpenAI request/response shape
+(`messages`, `usage`, `choices[]`). Multi-turn API requests: assistant
+messages without `reasoning_content` are dropped (provider requirement —
+fresh conversations always work). `stream:true` is not supported yet.
+
+Billing: requests bill the key owner's wallet quota — the free daily
+2 credits (2M tokens) first, then purchased bonus credits, exactly like
+chat in the app. CORS is open, so browser clients work too.

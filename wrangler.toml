@@ -13,3 +13,7 @@ id = "ed1cdbb087054f4ba0eb358c5dab893b"
 [[kv_namespaces]]
 binding = "HISTORY"
 id = "970125cd01d643599088f7ed15b6d4e9"
+
+[[kv_namespaces]]
+binding = "KEYS"
+id = "4f7ddedc2b444370afefe5f4f7d068f4"

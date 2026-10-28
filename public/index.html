@@ -1993,25 +1993,33 @@
               </div>
             </section>
 
-            <!-- Pengaturan & API -->
+            <!-- Pengaturan & API — kunci API riil (endpoint OpenAI-compatible) -->
             <section class="dash-section" aria-labelledby="apiTitle">
-              <h2 id="apiTitle" data-i18n="api.title">Settings &amp; API <span class="placeholder-tag" data-i18n="badge.placeholder">Placeholder</span></h2>
-              <p data-i18n="api.desc">This section is just a display scaffold for the next stage. There is no active public API yet, and the key below is sample text — not a real key.</p>
+              <h2 id="apiTitle" data-i18n="api.title">Settings &amp; API</h2>
+              <span data-i18n="api.connect" hidden>Connect a wallet in the top bar first.</span>
+              <p data-i18n="api.desc">Create API keys for the OpenAI-compatible endpoint. Requests bill the connected wallet's credits — the free daily 2 first, then purchased bonus credits.</p>
               <div class="dash-card">
-                <h3 data-i18n="api.keyTitle">API key</h3>
-                <div class="api-key-box">
-                  <code id="apiKeyText">echo_demo_••••••••••••••••••••4f2a</code>
-                  <button class="meta-btn" id="btnCopyKey" type="button" data-i18n-attr="title:api.copyKey;aria-label:api.copyKey" title="Copy the sample key" aria-label="Copy the sample key" style="width:32px;height:32px;">
+                <h3 data-i18n="api.keyTitle">API keys</h3>
+                <div class="dash-actions" style="margin-bottom: 14px;">
+                  <input id="apiKeyName" type="text" maxlength="40" data-i18n-attr="placeholder:api.namePlaceholder" placeholder="Key name (e.g. laptop)" style="flex: 2; min-width: 150px; padding: 10px 12px; font-size: 14px; background: rgba(12,17,21,0.7); border: 1px solid var(--line); border-radius: var(--radius-md); color: var(--ink);" />
+                  <button class="btn btn-primary" id="btnApiKeyCreate" type="button" style="padding: 10px 16px; font-size: 14px;" data-i18n="api.create">Create key</button>
+                </div>
+                <div class="api-key-box" id="apiKeyNewBox" hidden>
+                  <code id="apiKeyNew">ek_…</code>
+                  <button class="meta-btn" id="btnApiKeyCopy" type="button" data-i18n-attr="title:api.copyKey;aria-label:api.copyKey" title="Copy key" aria-label="Copy key" style="width:32px;height:32px;">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:16px;height:16px;"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M5 15V6a2 2 0 0 1 2-2h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                   </button>
                 </div>
+                <p id="apiNewNote" hidden style="margin: 0 0 14px; font-size: 12.5px; color: var(--ink-3); text-align: center;" data-i18n="api.keyOnce">Shown only now — copy it somewhere safe.</p>
+                <ul class="kv-list" id="apiKeyList">
+                  <li id="apiKeyEmpty" data-i18n="api.empty">No API keys yet.</li>
+                </ul>
                 <ul class="kv-list">
-                  <li><span class="k">Base URL</span><span class="v">https://api.echo.example/v1</span></li>
-                  <li><span class="k" data-i18n="kv.defaultModel">Default model</span><span class="v">echo Fast</span></li>
-                  <li><span class="k" data-i18n="kv.rateLimit">Request limit</span><span class="v" data-i18n="kv.rateLimitVal">— (not set yet)</span></li>
+                  <li><span class="k">Base URL</span><span class="v">https://echo.0xjustshrimp.workers.dev/v1/chat/completions</span></li>
+                  <li><span class="k" data-i18n="kv.defaultModel">Default model</span><span class="v">beam · Beam-1.0-501B-A23B</span></li>
+                  <li><span class="k">Works with</span><span class="v" data-i18n="api.worksWith">any OpenAI-compatible client (openai SDK, curl, …)</span></li>
                 </ul>
                 <div class="dash-actions">
-                  <button class="btn btn-ghost" type="button" disabled style="padding: 10px 16px; font-size: 14px;" data-i18n="api.newKey">Create new key (soon)</button>
                   <a class="btn btn-ghost" href="#/app" style="padding: 10px 16px; font-size: 14px;" data-i18n="api.changeModel">Change the default model in the app</a>
                 </div>
               </div>
@@ -2673,13 +2681,16 @@
             "backup.download": "Unduh (.json)",
             "backup.note": "Tombol unduh menghasilkan file JSON berisi data contoh di halaman ini.",
             "api.title": "Pengaturan & API",
-            "api.desc": "Bagian ini baru kerangka tampilan untuk tahap berikutnya. Belum ada API publik yang aktif, dan kunci di bawah adalah teks contoh — bukan kunci asli.",
+            "api.desc": "Buat kunci API untuk endpoint yang kompatibel OpenAI. Setiap request memotong kredit wallet yang tersambung — 2 gratis harian dulu, lalu bonus yang dibeli.",
             "api.keyTitle": "Kunci API",
-            "api.copyKey": "Salin kunci contoh",
+            "api.copyKey": "Salin kunci",
             "kv.defaultModel": "Model bawaan",
-            "kv.rateLimit": "Batas permintaan",
-            "kv.rateLimitVal": "— (belum diatur)",
-            "api.newKey": "Buat kunci baru (segera)",
+            "api.namePlaceholder": "Nama kunci (mis. laptop)",
+            "api.create": "Buat kunci",
+            "api.keyOnce": "Ditampilkan hanya sekali sekarang — salin dan simpan di tempat aman.",
+            "api.empty": "Belum ada kunci API.",
+            "api.connect": "Hubungkan wallet lewat tombol di kanan atas dulu.",
+            "api.worksWith": "semua client kompatibel OpenAI (SDK openai, curl, …)",
             "api.changeModel": "Ubah model bawaan di app",
             "dash.footer1": "echo — dashboard.",
             "dash.footer2": "<a href=\"#/\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Beranda</a> · <a href=\"#/app\" style=\"text-decoration: underline; text-underline-offset: 3px;\">App chat</a> · Semua angka = data nyata.",
@@ -2959,13 +2970,16 @@
             "backup.download": "Скачать (.json)",
             "backup.note": "Кнопка скачивания создаёт JSON-файл с примерными данными этой страницы.",
             "api.title": "Настройки и API",
-            "api.desc": "Этот раздел — пока только каркас оформления для следующего этапа. Публичного API ещё нет, а ключ ниже — примерный текст, а не настоящий ключ.",
-            "api.keyTitle": "Ключ API",
-            "api.copyKey": "Скопировать пример ключа",
+            "api.desc": "Создавайте API-ключи для OpenAI-совместимого эндпоинта. Каждый запрос списывает кредиты подключённого кошелька — сначала 2 бесплатных в день, затем купленные бонусные.",
+            "api.keyTitle": "Ключи API",
+            "api.copyKey": "Скопировать ключ",
             "kv.defaultModel": "Модель по умолчанию",
-            "kv.rateLimit": "Лимит запросов",
-            "kv.rateLimitVal": "— (пока не задано)",
-            "api.newKey": "Создать новый ключ (скоро)",
+            "api.namePlaceholder": "Название ключа (напр. laptop)",
+            "api.create": "Создать ключ",
+            "api.keyOnce": "Показывается только сейчас — скопируйте и храните в надёжном месте.",
+            "api.empty": "Ключей API пока нет.",
+            "api.connect": "Сначала подключите кошелёк в верхнем баре.",
+            "api.worksWith": "любые OpenAI-совместимые клиенты (openai SDK, curl, …)",
             "api.changeModel": "Сменить модель по умолчанию в приложении",
             "dash.footer1": "echo — дашборд.",
             "dash.footer2": "<a href=\"#/\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Главная</a> · <a href=\"#/app\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Чат-приложение</a> · Все числа = живые данные.",
@@ -3242,13 +3256,16 @@
             "backup.download": "Descargar (.json)",
             "backup.note": "El botón de descarga genera un archivo JSON con los datos de ejemplo de esta página.",
             "api.title": "Ajustes y API",
-            "api.desc": "Esta sección es solo un andamiaje visual para la siguiente etapa. Aún no hay una API pública activa, y la clave de abajo es un texto de ejemplo, no una clave real.",
-            "api.keyTitle": "Clave de API",
-            "api.copyKey": "Copiar la clave de ejemplo",
+            "api.desc": "Crea claves de API para el endpoint compatible con OpenAI. Cada solicitud gasta los créditos del wallet conectado — primero los 2 gratuitos diarios, luego los bonus comprados.",
+            "api.keyTitle": "Claves de API",
+            "api.copyKey": "Copiar la clave",
             "kv.defaultModel": "Modelo predeterminado",
-            "kv.rateLimit": "Límite de solicitudes",
-            "kv.rateLimitVal": "— (aún no fijado)",
-            "api.newKey": "Crear clave nueva (pronto)",
+            "api.namePlaceholder": "Nombre de la clave (p. ej. laptop)",
+            "api.create": "Crear clave",
+            "api.keyOnce": "Se muestra solo ahora — cópiala y guárdala en un lugar seguro.",
+            "api.empty": "Aún no hay claves de API.",
+            "api.connect": "Conecta primero un wallet con el botón de arriba a la derecha.",
+            "api.worksWith": "cualquier cliente compatible con OpenAI (SDK openai, curl, …)",
             "api.changeModel": "Cambiar el modelo predeterminado en la app",
             "dash.footer1": "echo — panel.",
             "dash.footer2": "<a href=\"#/\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Inicio</a> · <a href=\"#/app\" style=\"text-decoration: underline; text-underline-offset: 3px;\">App de chat</a> · Todas las cifras = datos reales.",
@@ -3525,13 +3542,16 @@
             "backup.download": "Télécharger (.json)",
             "backup.note": "Le bouton de téléchargement produit un fichier JSON contenant les données d'exemple de cette page.",
             "api.title": "Réglages et API",
-            "api.desc": "Cette section n'est qu'une maquette d'affichage pour l'étape suivante. Il n'y a pas encore d'API publique active, et la clé ci-dessous est un texte d'exemple — pas une vraie clé.",
-            "api.keyTitle": "Clé API",
-            "api.copyKey": "Copier la clé d'exemple",
+            "api.desc": "Créez des clés d'API pour l'endpoint compatible OpenAI. Chaque requête débite les crédits du wallet connecté — les 2 gratuits quotidiens d'abord, puis les bonus achetés.",
+            "api.keyTitle": "Clés d'API",
+            "api.copyKey": "Copier la clé",
             "kv.defaultModel": "Modèle par défaut",
-            "kv.rateLimit": "Limite de requêtes",
-            "kv.rateLimitVal": "— (pas encore défini)",
-            "api.newKey": "Créer une nouvelle clé (bientôt)",
+            "api.namePlaceholder": "Nom de la clé (ex. laptop)",
+            "api.create": "Créer une clé",
+            "api.keyOnce": "Affichée une seule fois maintenant — copiez-la et gardez-la en lieu sûr.",
+            "api.empty": "Pas encore de clé d'API.",
+            "api.connect": "Connectez d'abord un wallet via le bouton en haut à droite.",
+            "api.worksWith": "tout client compatible OpenAI (SDK openai, curl, …)",
             "api.changeModel": "Changer le modèle par défaut dans l'app",
             "dash.footer1": "echo — tableau de bord.",
             "dash.footer2": "<a href=\"#/\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Accueil</a> · <a href=\"#/app\" style=\"text-decoration: underline; text-underline-offset: 3px;\">App de chat</a> · Tous les chiffres = données réelles.",
@@ -3808,13 +3828,16 @@
             "backup.download": "Herunterladen (.json)",
             "backup.note": "Die Download-Schaltfläche erzeugt eine JSON-Datei mit den Beispieldaten dieser Seite.",
             "api.title": "Einstellungen & API",
-            "api.desc": "Dieser Bereich ist vorerst nur ein Darstellungsgerüst für die nächste Stufe. Es gibt noch keine aktive öffentliche API, und der Schlüssel unten ist Beispieltext — kein echter Schlüssel.",
+            "api.desc": "Erstelle API-Schlüssel für den OpenAI-kompatiblen Endpunkt. Jede Anfrage verbraucht die Credits des verbundenen Wallets — zuerst die 2 kostenlosen pro Tag, dann gekaufte Bonus-Credits.",
             "api.keyTitle": "API-Schlüssel",
-            "api.copyKey": "Beispielschlüssel kopieren",
+            "api.copyKey": "Schlüssel kopieren",
             "kv.defaultModel": "Standardmodell",
-            "kv.rateLimit": "Anfragelimit",
-            "kv.rateLimitVal": "— (noch nicht festgelegt)",
-            "api.newKey": "Neuen Schlüssel erstellen (bald)",
+            "api.namePlaceholder": "Schlüsselname (z. B. Laptop)",
+            "api.create": "Schlüssel erstellen",
+            "api.keyOnce": "Nur jetzt sichtbar — kopiere sie und bewahre sie sicher auf.",
+            "api.empty": "Noch keine API-Schlüssel.",
+            "api.connect": "Verbinde zuerst ein Wallet über den Button oben rechts.",
+            "api.worksWith": "jeder OpenAI-kompatible Client (openai SDK, curl, …)",
             "api.changeModel": "Standardmodell in der App ändern",
             "dash.footer1": "echo — Dashboard.",
             "dash.footer2": "<a href=\"#/\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Startseite</a> · <a href=\"#/app\" style=\"text-decoration: underline; text-underline-offset: 3px;\">Chat-App</a> · Alle Zahlen = echte Daten.",
@@ -4643,11 +4666,9 @@
           toast(window.ECHO_T("toast.backupDownloaded"));
         });
 
-        /* ---------- dashboard: API placeholder ---------- */
-        $("btnCopyKey").addEventListener("click", function () {
-          copyText($("apiKeyText").textContent, null);
-          toast(window.ECHO_T("toast.keyCopied"));
-        });
+        /* dashboard: key-universal copy helper untuk box key baru (lihat modul
+           API keys di bawah) */
+
 
         /* ---------- home: header pil + label seksi acak-lalu-jelas ---------- */
         var homeHeader = $("homeHeader");
@@ -6952,6 +6973,131 @@
       // Hasil verifikasi pembayaran (payment module) → refresh saldo live.
       document.addEventListener("echo-credits-changed", fetchCredits);
       if (!dashPage.classList.contains("hidden")) fetchCredits();
+    })();
+    </script>
+
+    <script>
+    /* =====================================================================
+       Dashboard API keys: create / list / revoke via /api/keys
+       (x-echo-wallet). Key baru ditampilkan penuh sekali; setelahnya hanya
+       bentuk tersamar — server menyimpan bentuk aslinya.
+       ===================================================================== */
+    (function () {
+      var dashPage = document.getElementById("page-dashboard");
+      var nameInput = document.getElementById("apiKeyName");
+      var createBtn = document.getElementById("btnApiKeyCreate");
+      var listEl = document.getElementById("apiKeyList");
+      var newBox = document.getElementById("apiKeyNewBox");
+      var newKeyEl = document.getElementById("apiKeyNew");
+      var newNote = document.getElementById("apiNewNote");
+      var copyBtn = document.getElementById("btnApiKeyCopy");
+      if (!dashPage || !listEl || !createBtn) return;
+
+      function wallet() { return window.ECHO_WALLET || null; }
+      function esc(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
+      var TRASH =
+        '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" style="width:15px;height:15px;"><path d="M4 7h16M9 7V5h6v2m-8 0 1 12h8l1-12M10 11v6m4-6v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      function rowHtml(k) {
+        var title = k.name || "—";
+        return (
+          '<li style="gap:6px;">' +
+          '<span class="v" style="max-width:92%; overflow:hidden; text-overflow:ellipsis;">' + esc(title) + "</span>" +
+          '<span class="k" style="font-family: var(--font-mono); font-size:12.5px;">' +
+          esc(k.key_masked || "") + (k.created ? " · " + esc(k.created) : "") +
+          "</span>" +
+          '<button class="meta-btn" type="button" data-revoke="' + esc(k.key_masked) +
+          '" data-i18n-attr="title:api.revoke" style="width:30px;height:30px;">' + TRASH + "</button>" +
+          "</li>"
+        );
+      }
+
+      function restoreInputs(state) {
+        var w = wallet();
+        createBtn.disabled = !w || state === "busy";
+        if (nameInput) nameInput.disabled = !w || state === "busy";
+      }
+
+      function loadKeys() {
+        var w = wallet();
+        var h = w ? { "x-echo-wallet": w } : {};
+        return fetch("/api/keys", { headers: h })
+          .then(function (r) {
+            if (r.status === 401) return { keys: [] };
+            return r.ok ? r.json() : { keys: [] };
+          })
+          .then(function (d) {
+            var rows = (d && d.keys) || [];
+            var html = "";
+            if (!w) {
+              html = "<li>" + esc(window.ECHO_T("api.connect")) + "</li>";
+            } else if (!rows.length) {
+              html = "<li>" + esc(window.ECHO_T("api.empty")) + "</li>";
+            } else {
+              for (var i = 0; i < rows.length; i++) html += rowHtml(rows[i]);
+            }
+            listEl.innerHTML = html;
+            restoreInputs();
+          })
+          .catch(function () { restoreInputs(); });
+      }
+
+      createBtn.addEventListener("click", function () {
+        var w = wallet();
+        if (!w || createBtn.disabled) return;
+        createBtn.disabled = true;
+        if (nameInput) nameInput.disabled = true;
+        fetch("/api/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-echo-wallet": w },
+          body: JSON.stringify({ name: (nameInput && nameInput.value) || "" }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            if (j && j.key) {
+              newKeyEl.textContent = j.key;
+              newBox.hidden = false;
+              if (newNote) newNote.hidden = false;
+              if (nameInput) nameInput.value = "";
+            }
+          })
+          .catch(function () { /* diam: tombol siap dipakai lagi */ })
+          .then(loadKeys);
+      });
+
+      copyBtn.addEventListener("click", function () {
+        var text = newKeyEl.textContent || "";
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).catch(function () {});
+        }
+      });
+
+      listEl.addEventListener("click", function (ev) {
+        var btn = ev.target.closest("[data-revoke]");
+        if (!btn) return;
+        var w = wallet();
+        if (!w) return;
+        var masked = btn.getAttribute("data-revoke");
+        btn.disabled = true;
+        fetch("/api/keys", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", "x-echo-wallet": w },
+          body: JSON.stringify({ key: masked }),
+        })
+          .then(loadKeys)
+          .catch(function () { btn.disabled = false; });
+      });
+
+      window.addEventListener("hashchange", function () {
+        if (!dashPage.classList.contains("hidden")) loadKeys();
+      });
+      document.addEventListener("echo-credits-changed", loadKeys);
+      if (!dashPage.classList.contains("hidden")) loadKeys();
     })();
     </script>
 
