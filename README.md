@@ -56,7 +56,9 @@ Authorization: Bearer ek_<40 hex>
 `/v1/chat/completions` follows the OpenAI request/response shape
 (`messages`, `usage`, `choices[]`). Multi-turn API requests: assistant
 messages without `reasoning_content` are dropped (provider requirement —
-fresh conversations always work). `stream:true` is not supported yet.
+fresh conversations always work). Both `stream:false` (default, single
+JSON) and `stream:true` (SSE pass-through with `stream_options.include_usage`)
+are supported.
 
 Billing: requests bill the key owner's wallet quota — the free daily
 2 credits (2M tokens) first, then purchased bonus credits, exactly like

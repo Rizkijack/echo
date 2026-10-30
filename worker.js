@@ -676,6 +676,24 @@ async function handleV1Models() {
   );
 }
 
+// Pembukuan bersama untuk /v1 (JSON & SSE): usage harian, stats global,
+// last_used key, dan burn bonus untuk overflow di atas kuota gratis.
+async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens) {
+  await addUsage(env, uid, usageTokens);
+  await bumpGlobalStats(env, usageTokens);
+  // last_used best-effort (satu KV write per request)
+  try {
+    await env.KEYS.put(keyLookupKey(apiKey), JSON.stringify({
+      w: wallet, u: new Date().toISOString().slice(0, 10),
+    }));
+  } catch { /* best-effort */ }
+  const overflowPrev = Math.max(0, prevUsage.tokens - DAILY_CREDIT_LIMIT);
+  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - DAILY_CREDIT_LIMIT);
+  if (overflowNow > overflowPrev) {
+    await spendBonusTokens(env, wallet, overflowNow - overflowPrev);
+  }
+}
+
 async function handleV1Chat(request, env) {
   if (request.method === "OPTIONS") {
     return withCors(new Response(null, { status: 204, headers: { "Content-Type": "text/plain" } }));
@@ -703,26 +721,81 @@ async function handleV1Chat(request, env) {
   } catch {
     return openAIError("Request body must be JSON", 400);
   }
-  if (body && body.stream) {
-    return openAIError("Streaming is not supported yet; use stream:false (the default).", 400);
-  }
+  const wantStream = !!(body && body.stream);
   const messages = cleanMessages(body && body.messages, true);
   if (!messages.length || messages[messages.length - 1].role !== "user") {
     return openAIError("messages must end with a user message", 400);
+  }
+  const upstreamBody = { model: MODEL, messages };
+  if (wantStream) {
+    upstreamBody.stream = true;
+    upstreamBody.stream_options = { include_usage: true };
   }
   let upstream;
   try {
     upstream = await fetch(UPSTREAM, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.REFLECTION_API_KEY}` },
-      body: JSON.stringify({ model: MODEL, messages }),
+      body: JSON.stringify(upstreamBody),
     });
   } catch {
     return openAIError("Provider error", 502);
   }
   if (!upstream.ok) return openAIError("Provider error", 502);
+  // Mode streaming (agent CLI memakai SSE default): pipa upstream SSE
+  // apa adanya ke client, parse event sambil lewat untuk hitung usage
+  // (chunk usage terakhir dari stream_options; fallback estimasi char/4).
+  if (wantStream) {
+    if (!upstream.body) return openAIError("Provider error", 502);
+    let finalUsage = 0;
+    let estimateChars = 0;
+    let tail = "";
+    const dec = new TextDecoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            controller.enqueue(value);
+            tail += dec.decode(value, { stream: true });
+            let idx;
+            while ((idx = tail.indexOf("\n")) >= 0) {
+              const line = tail.slice(0, idx).replace(/\r$/, "");
+              tail = tail.slice(idx + 1);
+              if (line.slice(0, 5) !== "data:") continue;
+              const payload = line.slice(5).trim();
+              if (!payload || payload === "[DONE]") continue;
+              try {
+                const j = JSON.parse(payload);
+                if (j && j.usage && Number(j.usage.total_tokens)) {
+                  finalUsage = Number(j.usage.total_tokens);
+                } else if (
+                  j && j.choices && j.choices[0] && j.choices[0].delta &&
+                  typeof j.choices[0].delta.content === "string"
+                ) {
+                  estimateChars += j.choices[0].delta.content.length;
+                }
+              } catch { /* chunk malformed: lewati */ }
+            }
+          }
+          controller.close();
+        } catch {
+          controller.close(); // pipeline putus: tutup, pembukuan tetap jalan
+        }
+        const usageTokens = finalUsage || Math.ceil(estimateChars / 4);
+        if (usageTokens > 0) {
+          await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
+        }
+      },
+    });
+    return withCors(new Response(stream, {
+      status: 200,
+      headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-store" },
+    }));
+  }
   let data;
-  let usageTokens;
   try {
     data = await upstream.json();
   } catch {
@@ -731,23 +804,11 @@ async function handleV1Chat(request, env) {
   if (!data || !Array.isArray(data.choices) || !data.choices.length) {
     return openAIError("Empty provider reply", 502);
   }
-  usageTokens =
+  const usageTokens =
     data && data.usage && Number(data.usage.total_tokens)
       ? Number(data.usage.total_tokens)
       : Math.ceil((JSON.stringify(data).length || 0) / 4);
-  await addUsage(env, uid, usageTokens);
-  await bumpGlobalStats(env, usageTokens);
-  // last_used best-effort (satu KV write per request)
-  try {
-    await env.KEYS.put(keyLookupKey(auth.key), JSON.stringify({
-      w: wallet, u: new Date().toISOString().slice(0, 10),
-    }));
-  } catch { /* best-effort */ }
-  const overflowPrev = Math.max(0, prevUsage.tokens - DAILY_CREDIT_LIMIT);
-  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - DAILY_CREDIT_LIMIT);
-  if (overflowNow > overflowPrev) {
-    await spendBonusTokens(env, wallet, overflowNow - overflowPrev);
-  }
+  await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
   return withCors(jsonResponse(data, 200));
 }
 
