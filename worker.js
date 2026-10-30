@@ -694,7 +694,7 @@ async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens) {
   }
 }
 
-async function handleV1Chat(request, env) {
+async function handleV1Chat(request, env, ctx) {
   if (request.method === "OPTIONS") {
     return withCors(new Response(null, { status: 204, headers: { "Content-Type": "text/plain" } }));
   }
@@ -751,8 +751,24 @@ async function handleV1Chat(request, env) {
     let estimateChars = 0;
     let tail = "";
     const dec = new TextDecoder();
+    // Pembukuan harus kelar walau response stream sudah selesai di client:
+    // runtime bisa dibekukan begitu stream close → waitUntil menahan alive.
+    let resolveBill;
+    const billDone = new Promise((res) => { resolveBill = res; });
+    ctx.waitUntil(billDone);
     const stream = new ReadableStream({
       async start(controller) {
+        let accrual = 0;
+        const settle = async () => {
+          if (accrual++) return; // sekali saja
+          const usageTokens = finalUsage || Math.ceil(estimateChars / 4);
+          try {
+            if (usageTokens > 0) {
+              await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
+            }
+          } catch { /* best-effort */ }
+          resolveBill();
+        };
         const reader = upstream.body.getReader();
         try {
           while (true) {
@@ -782,11 +798,9 @@ async function handleV1Chat(request, env) {
           }
           controller.close();
         } catch {
-          controller.close(); // pipeline putus: tutup, pembukuan tetap jalan
-        }
-        const usageTokens = finalUsage || Math.ceil(estimateChars / 4);
-        if (usageTokens > 0) {
-          await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
+          controller.close(); // client abort / pipeline putus: tetap buku seadanya
+        } finally {
+          await settle();
         }
       },
     });
@@ -911,7 +925,7 @@ async function handleChat(request, env) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/chat") {
       return handleChat(request, env);
@@ -932,7 +946,7 @@ export default {
       return handleKeys(request, env);
     }
     if (url.pathname === "/v1/chat/completions") {
-      return withCors(await handleV1Chat(request, env));
+      return withCors(await handleV1Chat(request, env, ctx));
     }
     if (url.pathname === "/v1/models" && (request.method === "GET" || request.method === "OPTIONS")) {
       if (request.method === "OPTIONS") {
