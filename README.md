@@ -51,14 +51,11 @@ next to USDC/USDG:
   treasury; the transaction marker TTL is 30 days like the other tokens.
 - **Holding tier**: keeping ≥ 10,000 $WIF in the connected wallet raises
   the free daily allowance from 2 to 10 credits/day while the tokens
-  stay held. Burn order: free daily (+tier) first, then purchased bonus
-  credits. NOTE: the public Robinhood RPC rate-limits Cloudflare Workers
-  egress (429), so the 24h balance cache check needs a signed RPC
-  endpoint (e.g. Alchemy `robinhood-mainnet.g.alchemy.com/v2/<key>`,
-  the official alternative listed by docs.robinhood.com/chain/connecting)
-  as a Worker secret — without it the tier gracefully reads "not holding"
-  and payments/top-ups (verify + $WIF rate) still work.
-  Checking re-runs after every top-up.
+  stay held. The balance is checked via `balanceOf` on the official
+  Alchemy endpoint (Worker secret `ALCHEMY_ROBINHOOD_RPC`; the public
+  RPC is the fallback — it rate-limits Workers egress) and cached for
+  24h (`tier:<wallet>` KV), re-checked after every top-up.
+  Burn order: free daily (+tier) first, then purchased bonus credits.
 
 $WIF is optional — the free daily credits and USDC/USDG top-ups stay
 available to everyone.
