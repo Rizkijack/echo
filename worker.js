@@ -543,7 +543,7 @@ async function handleTopupVerify(request, env) {
     return jsonResponse({ error: "Transaction already claimed", code: "already_claimed" }, 409);
   }
 
-  const receipt = await rpcCall(chain.rpc, "eth_getTransactionReceipt", [txHash]);
+  const receipt = await rpcRetry(chain.rpc, "eth_getTransactionReceipt", [txHash], 3);
   if (receipt.error) {
     return jsonResponse({ error: "Verification RPC failed", detail: receipt.error }, 502);
   }
@@ -1105,19 +1105,6 @@ export default {
     }
     if (url.pathname === "/api/credits") {
       return handleCredits(request, env);
-    }
-    if (url.pathname === "/api/tier-debug") {
-      // THROWAWAY debug: blockscout reachability dari worker egress
-      const wallet = walletIdentity(request);
-      let bs = null;
-      try {
-        const r2 = await fetch("https://robinhoodchain.blockscout.com/api/v2/addresses/" + wallet + "/token-balances?type=ERC-20");
-        const t2 = await r2.text();
-        bs = { status: r2.status, body: t2.slice(0, 300) };
-      } catch (e) {
-        bs = { err: String(e).slice(0, 200) };
-      }
-      return jsonResponse({ wallet, bs }, 200);
     }
     if (url.pathname === "/api/topup/config" && request.method === "GET") {
       return handleTopupConfig(request, env);
