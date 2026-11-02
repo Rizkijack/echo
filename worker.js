@@ -76,8 +76,22 @@ async function readTier(env, wallet) {
   }
   return { holder: false, bonusTokens: 0, enforced: true, stale: true };
 }
-// RPC publik Robinhood rate-limits egress CF (429 intermittently per IP
-// shared) — ladder retry dengan backoff kecil untuk eth_call tier check.
+// RPC Robinhood: publik rate-limits CF egress (429) — Alchemy (resmi,
+// docs.robinhood.com/chain/connecting) dipakai sbg primary jika secret
+// ALCHEMY_ROBINHOOD_RPC di-set, publik sbg fallback.
+function robinhoodEndpoints(env) {
+  const list = [];
+  if (env && env.ALCHEMY_ROBINHOOD_RPC) list.push(env.ALCHEMY_ROBINHOOD_RPC);
+  list.push(TOPUP_CHAINS.robinhood.rpc);
+  return list;
+}
+async function rpcMulti(env, method, params) {
+  for (const rpc of robinhoodEndpoints(env)) {
+    const res = await rpcRetry(rpc, method, params, 2);
+    if (res && res.result !== undefined) return res;
+  }
+  return {};
+}
 async function rpcRetry(rpc, method, params, attempts) {
   let last = null;
   for (let i = 0; i < attempts; i++) {
@@ -92,7 +106,7 @@ async function refreshTier(env, wallet) {
   const wif = TOPUP_CHAINS.robinhood.tokens.wif;
   const data =
     "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0"); // balanceOf(address)
-  const res = await rpcRetry(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: wif.contract, data }, "latest"], 4);
+  const res = await rpcMulti(env, "eth_call", [{ to: wif.contract, data }, "latest"]);
   if (!res.result) return null; // RPC gagal semua: pertahankan cache lama / default
   const raw = hexToNumberSafe(res.result);
   const balance = raw === null ? 0 : Number(raw) / Math.pow(10, wif.decimals);
@@ -543,7 +557,9 @@ async function handleTopupVerify(request, env) {
     return jsonResponse({ error: "Transaction already claimed", code: "already_claimed" }, 409);
   }
 
-  const receipt = await rpcRetry(chain.rpc, "eth_getTransactionReceipt", [txHash], 3);
+  const receipt = chain.key === "robinhood"
+    ? await rpcMulti(env, "eth_getTransactionReceipt", [txHash])
+    : await rpcRetry(chain.rpc, "eth_getTransactionReceipt", [txHash], 3);
   if (receipt.error) {
     return jsonResponse({ error: "Verification RPC failed", detail: receipt.error }, 502);
   }
