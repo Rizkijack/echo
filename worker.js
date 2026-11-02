@@ -206,7 +206,13 @@ async function wifPriceUsd(env) {
   if (wifPricePending) return wifPricePending;
   wifPricePending = (async () => {
     try {
-      const p = await fetchWifPrice();
+      let p = await fetchWifPrice(env);
+      if (!p) {
+        // cold-start transient: satu retry sebelum menyerah (kegagalan tidak
+        // di-cache, jadi request berikutnya mencoba lagi otomatis)
+        await new Promise((r) => setTimeout(r, 500));
+        p = await fetchWifPrice(env);
+      }
       if (p > 0) {
         wifPriceCache.usd = p;
         wifPriceCache.at = Date.now();
