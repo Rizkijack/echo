@@ -1974,6 +1974,7 @@
                     <span data-i18n="wif.rateLbl" hidden>Live $WIF rate</span>
                     <span data-i18n="wif.contractLbl" hidden>$WIF contract</span>
                     <div id="wifRate">—</div>
+                    <div id="wifPkgs" style="margin-top: 4px; color: var(--ink-3);"></div>
                     <div id="wifContract" style="margin-top: 4px; overflow: hidden; text-overflow: ellipsis;">0x5173b8ea6923c2d40267890d45c46a3480954773</div>
                   </div>
                   <div class="topup-amounts" role="group" data-i18n-attr="aria-label:topup.groupAria" aria-label="Choose a top-up amount">
@@ -7080,6 +7081,18 @@ model      beam</pre>
           rateEl.textContent =
             t + ": 1 $WIF ≈ $" + price.toFixed(price >= 0.01 ? 4 : 6) +
             " · 1 USDC/USDG ≈ " + Math.round(wifPerUsd).toLocaleString("en-US") + " $WIF";
+          // Ekuivalensi per paket: worth $X pada $WIF = paket credits sama
+          // dengan $X dalam USDC/USDG (parity 1:1 — floor sama dgn verify).
+          var f = function (usd) {
+            return Math.floor((usd * wifPerUsd)).toLocaleString("en-US") + " $WIF";
+          };
+          var pkgEl = document.getElementById("wifPkgs");
+          if (pkgEl) {
+            pkgEl.textContent =
+              "$5 ≈ " + f(5) + " = 50 credits · " +
+              "$10 ≈ " + f(10) + " = 100 credits · " +
+              "$25 ≈ " + f(25) + " = 250 credits";
+          }
         } else {
           rateEl.textContent = t + ": — (live rate unavailable)";
         }
