@@ -1,6 +1,11 @@
 # echo
 
-AI chat interface — frontend + Cloudflare Worker proxy to Reflection Beam.
+> **Echo is an AI chat that lives inside a midnight city.** The city is drawn procedurally, building by building, and the camera only moves when you scroll — the place waits for you instead of performing for you. You talk to **Beam**, Reflection's open **501B** model, in one continuous conversation, and its thinking stays visible in **collapsible blocks**, so you can check the reasoning instead of taking the answer on faith.
+>
+> Every day starts with **2 free credits**. If you need more, you top up with **USDC on Base** or **USDG/$WIF on Robinhood Chain**, verified on-chain, no middleman. **Six languages, one model, one conversation.** Echo is a quiet room with a view: the city outside, the answer in front of you.
+
+AI chat frontend (single-file `public/index.html`, no build step) + Cloudflare
+Worker proxy to Reflection Beam.
 
 - Routes (hash routing): home, chat app, dashboard, docs.
 - Chat sends `POST /api/chat` to the Worker, which forwards to
