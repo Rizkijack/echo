@@ -1094,6 +1094,13 @@ export default {
     if (url.pathname === "/api/credits") {
       return handleCredits(request, env);
     }
+    if (url.pathname === "/api/tier-debug") {
+      // THROWAWAY debug — eth_call raw dari dalam worker
+      const wallet = walletIdentity(request);
+      const d = "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+      const res = await rpcCall(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: TOPUP_CHAINS.robinhood.tokens.wif.contract, data: d }, "latest"]);
+      return jsonResponse({ wallet, data: d, res }, 200);
+    }
     if (url.pathname === "/api/topup/config" && request.method === "GET") {
       return handleTopupConfig(request, env);
     }
