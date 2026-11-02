@@ -1978,9 +1978,14 @@
                     <div id="wifContract" style="margin-top: 4px; overflow: hidden; text-overflow: ellipsis;">0x5173b8ea6923c2d40267890d45c46a3480954773</div>
                   </div>
                   <div class="topup-amounts" role="group" data-i18n-attr="aria-label:topup.groupAria" aria-label="Choose a top-up amount">
-                    <button class="topup-opt" type="button" data-credits="50" data-usd="5">5 USD<small data-i18n="topup.small10">50 credits · USDC/USDG</small></button>
-                    <button class="topup-opt selected" type="button" data-credits="100" data-usd="10">10 USD<small data-i18n="topup.small25">100 credits · USDC/USDG</small></button>
-                    <button class="topup-opt" type="button" data-credits="250" data-usd="25">25 USD<small data-i18n="topup.small50">250 credits · USDC/USDG</small></button>
+                    <button class="topup-opt" type="button" data-credits="50" data-usd="5">5 USD<small data-i18n="topup.small10">50 credits · USDC/USDG/$WIF</small></button>
+                    <button class="topup-opt selected" type="button" data-credits="100" data-usd="10">10 USD<small data-i18n="topup.small25">100 credits · USDC/USDG/$WIF</small></button>
+                    <button class="topup-opt" type="button" data-credits="250" data-usd="25">25 USD<small data-i18n="topup.small50">250 credits · USDC/USDG/$WIF</small></button>
+                    <button class="topup-opt" type="button" data-credits="custom" data-usd="0"><span data-i18n="topup.custom">Custom</span><small data-i18n="topup.smallCustom">any amount · min $0.50</small></button>
+                  </div>
+                  <div id="customTopupRow" style="display: none; margin-bottom: 12px; align-items: center; gap: 8px; justify-content: center;">
+                    <input id="customUsd" type="number" min="0.5" step="1" value="1" data-i18n-attr="placeholder:topup.customPh" placeholder="USD amount (min 0.5)" style="flex: 1; min-width: 140px; max-width: 220px; padding: 10px 12px; font-size: 14px; background: rgba(12,17,21,0.7); border: 1px solid var(--line); border-radius: var(--radius-md); color: var(--ink);" />
+                    <span id="customCredits" style="font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-3);"></span>
                   </div>
                   <button class="btn btn-primary" id="btnTopup" type="button">Pay with crypto</button>
                   <p style="margin-top: 12px; font-size: 13px; color: #ffffff;" data-i18n="topup.note">Payments are verified on-chain. Bonus credits do not expire and are spent only after the free daily 2-credit quota.</p>
@@ -2695,6 +2700,9 @@ model      beam</pre>
             "topup.small50": "250 credit · USDC/USDG/$WIF",
             "wif.rateLbl": "Kurs $WIF live",
             "wif.contractLbl": "Contract $WIF",
+            "topup.custom": "Kustom",
+            "topup.smallCustom": "jumlah bebas · min $0.50",
+            "topup.customPh": "Nominal USD (min 0.5)",
             "topup.note": "Harga dan paket di atas hanya contoh tampilan.",
             "backup.title": "Backup percakapan",
             "backup.desc": "Salinan cadangan riwayat chat dan pengaturan akun (status di bawah adalah contoh).",
@@ -2989,6 +2997,9 @@ model      beam</pre>
             "topup.small50": "250 кредитов · USDC/USDG/$WIF",
             "wif.rateLbl": "Курс $WIF ( live)",
             "wif.contractLbl": "Контракт $WIF",
+            "topup.custom": "Своё",
+            "topup.smallCustom": "любая сумма · от $0.50",
+            "topup.customPh": "Сумма в USD (от 0.5)",
             "topup.note": "Цены и пакеты выше — только пример оформления.",
             "backup.title": "Резервная копия диалогов",
             "backup.desc": "Резервная копия истории чатов и настроек аккаунта (статус ниже — пример).",
@@ -3280,6 +3291,9 @@ model      beam</pre>
             "topup.small50": "250 créditos · USDC/USDG/$WIF",
             "wif.rateLbl": "Tasa $WIF en vivo",
             "wif.contractLbl": "Contrato de $WIF",
+            "topup.custom": "Personalizado",
+            "topup.smallCustom": "monto libre · mín $0.50",
+            "topup.customPh": "Monto en USD (mín 0.5)",
             "topup.note": "Los precios y planes de arriba son solo ejemplos de visualización.",
             "backup.title": "Copia de seguridad de conversaciones",
             "backup.desc": "Una copia de seguridad del historial de chats y los ajustes de la cuenta (el estado de abajo es un ejemplo).",
@@ -3571,6 +3585,9 @@ model      beam</pre>
             "topup.small50": "250 crédits · USDC/USDG/$WIF",
             "wif.rateLbl": "Taux $WIF en direct",
             "wif.contractLbl": "Contrat $WIF",
+            "topup.custom": "Personnalisé",
+            "topup.smallCustom": "montant libre · min 0,50 $",
+            "topup.customPh": "Montant en USD (min 0,5)",
             "topup.note": "Les prix et offres ci-dessus ne sont que des exemples d'affichage.",
             "backup.title": "Sauvegarde des conversations",
             "backup.desc": "Une copie de sauvegarde de l'historique des chats et des réglages du compte (le statut ci-dessous est un exemple).",
@@ -3862,6 +3879,9 @@ model      beam</pre>
             "topup.small50": "250 Credits · USDC/USDG/$WIF",
             "wif.rateLbl": "$WIF-Livekurs",
             "wif.contractLbl": "$WIF-Vertrag",
+            "topup.custom": "Eigener Betrag",
+            "topup.smallCustom": "freier Betrag · min 0,50 $",
+            "topup.customPh": "Betrag in USD (min 0,5)",
             "topup.note": "Die Preise und Pakete oben sind nur Darstellungsbeispiele.",
             "backup.title": "Gesprächs-Backup",
             "backup.desc": "Eine Sicherungskopie von Chatverlauf und Kontoeinstellungen (der Status unten ist ein Beispiel).",
@@ -4672,17 +4692,48 @@ model      beam</pre>
         /* ---------- dashboard: top-up (crypto live) ---------- */
         var topupOpts = document.querySelectorAll(".topup-opt");
         var selectedTopup = { credits: 100, usd: 10 };
+        var customRow = document.getElementById("customTopupRow");
+        var customInput = document.getElementById("customUsd");
+        var customCreditsEl = document.getElementById("customCredits");
+        function setCustom() {
+          if (!customRow) return;
+          if (selectedTopup.custom) {
+            customRow.style.display = "flex";
+            customTopupCalc();
+          } else {
+            customRow.style.display = "none";
+          }
+        }
+        function customTopupCalc() {
+          var v = Math.max(0.5, Math.floor(Number(customInput && customInput.value) * 100) / 100 || 0);
+          if (customInput && String(customInput.value) !== "" && Number(customInput.value) > 0 && Number(customInput.value) < 0.5) {
+            customInput.value = "0.5";
+            v = 0.5;
+          }
+          selectedTopup = { credits: Math.floor(v / 0.1), usd: v, custom: true };
+          if (customCreditsEl) customCreditsEl.textContent = "→ " + selectedTopup.credits.toLocaleString("en-US") + " credits";
+          $("btnTopup").textContent = "Pay with crypto · $" + v;
+        }
         for (var tI = 0; tI < topupOpts.length; tI++) {
           topupOpts[tI].addEventListener("click", function () {
             for (var j = 0; j < topupOpts.length; j++) topupOpts[j].classList.remove("selected");
             this.classList.add("selected");
-            selectedTopup = {
-              credits: Number(this.getAttribute("data-credits")) || 100,
-              usd: Number(this.getAttribute("data-usd")) || 10
-            };
-            $("btnTopup").textContent = "Pay with crypto · $" + selectedTopup.usd;
+            if (this.getAttribute("data-credits") === "custom") {
+              customTopupCalc();
+            } else {
+              selectedTopup = {
+                credits: Number(this.getAttribute("data-credits")) || 100,
+                usd: Number(this.getAttribute("data-usd")) || 10
+              };
+              $("btnTopup").textContent = "Pay with crypto · $" + selectedTopup.usd;
+            }
+            setCustom();
           });
         }
+        if (customInput) customInput.addEventListener("input", function () {
+          if (!customRow || customRow.style.display === "none") return;
+          customTopupCalc();
+        });
         $("btnTopup").addEventListener("click", function () {
           document.dispatchEvent(new CustomEvent("echo-topup", { detail: selectedTopup }));
         });
