@@ -76,12 +76,24 @@ async function readTier(env, wallet) {
   }
   return { holder: false, bonusTokens: 0, enforced: true, stale: true };
 }
+// RPC publik Robinhood rate-limits egress CF (429 intermittently per IP
+// shared) — ladder retry dengan backoff kecil untuk eth_call tier check.
+async function rpcRetry(rpc, method, params, attempts) {
+  let last = null;
+  for (let i = 0; i < attempts; i++) {
+    const res = await rpcCall(rpc, method, params);
+    if (res && res.result !== undefined) return res;
+    last = res;
+    await new Promise((r) => setTimeout(r, 250 + i * 500));
+  }
+  return last;
+}
 async function refreshTier(env, wallet) {
   const wif = TOPUP_CHAINS.robinhood.tokens.wif;
   const data =
     "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0"); // balanceOf(address)
-  const res = await rpcCall(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: wif.contract, data }, "latest"]);
-  if (!res.result) return null; // RPC gagal: pertahankan cache lama / default
+  const res = await rpcRetry(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: wif.contract, data }, "latest"], 4);
+  if (!res.result) return null; // RPC gagal semua: pertahankan cache lama / default
   const raw = hexToNumberSafe(res.result);
   const balance = raw === null ? 0 : Number(raw) / Math.pow(10, wif.decimals);
   const holder = balance >= WIF_HOLD_MIN;
@@ -1093,13 +1105,6 @@ export default {
     }
     if (url.pathname === "/api/credits") {
       return handleCredits(request, env);
-    }
-    if (url.pathname === "/api/tier-debug") {
-      // THROWAWAY debug — eth_call raw dari dalam worker
-      const wallet = walletIdentity(request);
-      const d = "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0");
-      const res = await rpcCall(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: TOPUP_CHAINS.robinhood.tokens.wif.contract, data: d }, "latest"]);
-      return jsonResponse({ wallet, data: d, res }, 200);
     }
     if (url.pathname === "/api/topup/config" && request.method === "GET") {
       return handleTopupConfig(request, env);
