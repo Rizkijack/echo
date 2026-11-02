@@ -1106,6 +1106,27 @@ export default {
     if (url.pathname === "/api/credits") {
       return handleCredits(request, env);
     }
+    if (url.pathname === "/api/tier-debug") {
+      // THROWAWAY debug retry-profile of the tier eth_call
+      const wallet = walletIdentity(request);
+      const d = "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+      const tries = [];
+      for (let i = 0; i < 4; i++) {
+        try {
+          const r2 = await fetch(TOPUP_CHAINS.robinhood.rpc, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: TOPUP_CHAINS.robinhood.tokens.wif.contract, data: d }, "latest"] }),
+          });
+          const t2 = await r2.text();
+          tries.push({ i, status: r2.status, body: t2.slice(0, 120) });
+        } catch (e) {
+          tries.push({ i, err: String(e).slice(0, 120) });
+        }
+        await new Promise((r) => setTimeout(r, 400));
+      }
+      return jsonResponse({ wallet, tries }, 200);
+    }
     if (url.pathname === "/api/topup/config" && request.method === "GET") {
       return handleTopupConfig(request, env);
     }
