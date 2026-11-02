@@ -7076,10 +7076,10 @@ model      beam</pre>
         var t = window.ECHO_T("wif.rateLbl");
         var price = wif ? Number(wif.price_usd) : NaN;
         if (price > 0) {
-          var wifPerCredit = 0.10 / price; // 1 credit = 0.10 USD
+          var wifPerUsd = 1 / price; // nilai 1 stablecoin dalam $WIF
           rateEl.textContent =
             t + ": 1 $WIF ≈ $" + price.toFixed(price >= 0.01 ? 4 : 6) +
-            " · 1 credit ≈ " + Math.round(wifPerCredit).toLocaleString("en-US") + " $WIF";
+            " · 1 USDC/USDG ≈ " + Math.round(wifPerUsd).toLocaleString("en-US") + " $WIF";
         } else {
           rateEl.textContent = t + ": — (live rate unavailable)";
         }
