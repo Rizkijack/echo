@@ -59,6 +59,10 @@ function tbHost(env) {
 }
 async function tbSendEvent(env, name, row) {
   if (!env || !env.TINYBIRD_TOKEN || !row) return; // belum dikonfigurasi: no-op
+  // DateTime ClickHouse: "YYYY-MM-DD HH:MM:SS" (bukan ISO-T-Z)
+  if (row.timestamp && row.timestamp.slice) {
+    row.timestamp = row.timestamp.slice(0, 19).replace("T", " ");
+  }
   try {
     await fetch(tbHost(env) + "/v0/events?name=" + encodeURIComponent(name), {
       method: "POST",

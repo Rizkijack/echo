@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@tinybirdco/sdk": "^0.0.84"
+  },
+  "scripts": {
+    "tinybird:dev": "tinybird dev",
+    "tinybird:build": "tinybird build",
+    "tinybird:deploy": "tinybird deploy",
+    "tinybird:preview": "tinybird preview"
+  }
+}
