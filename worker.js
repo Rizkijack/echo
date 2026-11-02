@@ -78,7 +78,8 @@ async function readTier(env, wallet) {
 }
 async function refreshTier(env, wallet) {
   const wif = TOPUP_CHAINS.robinhood.tokens.wif;
-  const data = "0x70a08231" + padAddress(wallet); // balanceOf(address)
+  const data =
+    "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0"); // balanceOf(address)
   const res = await rpcCall(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: wif.contract, data }, "latest"]);
   if (!res.result) return null; // RPC gagal: pertahankan cache lama / default
   const raw = hexToNumberSafe(res.result);
