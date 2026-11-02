@@ -129,29 +129,44 @@ async function getTier(env, wallet) {
 }
 
 // ---------- harga $WIF (cache 60s per isolate) ----------
-// Primary: DexScreener (free, no key, CF-friendly) — pair DEX Robinhood
-// ($WIF/ETH + $WIF/USDG); pick pair terlikuid. Fallback: CoinGecko id
-// "world-is-flat". Feed down → null → verifikasi harga skip (retry).
+// Oracle order (user, 2026-11-03):
+//  1. Alchemy Prices API (by-ADDRESS — by-symbol salah token: "WIF" juga
+//     dogwifhat di Solana, $0.17 vs $0.0015), key dari secret Alchemy RPC.
+//  2. CoinGecko id world-is-flat (kadang diblok egress CF).
+//  3. DexScreener pair max-liquidity (fallback yang terbukti jalan).
+// Feed down semua → null → verifikasi harga skip (retry).
 const WIF_PRICE_TTL_MS = 60 * 1000;
 const wifPriceCache = { usd: 0, at: 0 };
 let wifPricePending = null;
 const WIF_DS_URL = "https://api.dexscreener.com/latest/dex/tokens/0x5173b8ea6923c2d40267890d45c46a3480954773";
 
-async function fetchWifPrice() {
-  try {
-    const r = await fetch(WIF_DS_URL);
-    if (r.ok) {
-      const j = await r.json();
-      let best = null;
-      for (const p of (j && j.pairs) || []) {
-        const liq = (p && p.liquidity && Number(p.liquidity.usd)) || 0;
-        const price = (p && p.priceUsd && Number(p.priceUsd)) || 0;
-        if (price > 0 && liq > 0 && (!best || liq > best.liq)) best = { price, liq };
+function alchemyKey(env) {
+  const u = env && env.ALCHEMY_ROBINHOOD_RPC;
+  if (!u) return null;
+  const m = String(u).match(/\/v2\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+async function fetchWifPrice(env) {
+  const key = alchemyKey(env);
+  if (key) {
+    try {
+      const r = await fetch("https://api.g.alchemy.com/prices/v1/" + key + "/tokens/by-address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          networks: ["robinhood-mainnet"],
+          addresses: [{ address: "0x5173b8ea6923c2d40267890d45c46a3480954773", network: "robinhood-mainnet" }],
+        }),
+      });
+      if (r.ok) {
+        const j = await r.json();
+        const v = j && j.data && j.data[0] && j.data[0].prices && j.data[0].prices[0] && Number(j.data[0].prices[0].value);
+        if (v > 0) return v;
       }
-      if (best) return best.price;
+    } catch {
+      // lanjut ke rival berikutnya
     }
-  } catch {
-    // lanjut ke fallback
   }
   try {
     const r2 = await fetch(
@@ -163,12 +178,27 @@ async function fetchWifPrice() {
       if (p2 > 0) return p2;
     }
   } catch {
+    // lanjut ke fallback
+  }
+  try {
+    const r3 = await fetch(WIF_DS_URL);
+    if (r3.ok) {
+      const j3 = await r3.json();
+      let best = null;
+      for (const p of (j3 && j3.pairs) || []) {
+        const liq = (p && p.liquidity && Number(p.liquidity.usd)) || 0;
+        const price = (p && p.priceUsd && Number(p.priceUsd)) || 0;
+        if (price > 0 && liq > 0 && (!best || liq > best.liq)) best = { price, liq };
+      }
+      if (best) return best.price;
+    }
+  } catch {
     // feed mati semua
   }
   return null;
 }
 
-async function wifPriceUsd() {
+async function wifPriceUsd(env) {
   const now = Date.now();
   if (wifPriceCache.usd > 0 && now - wifPriceCache.at < WIF_PRICE_TTL_MS) {
     return wifPriceCache.usd;
@@ -465,7 +495,7 @@ async function handleStats(request, env) {
 // ---------- top-up crypto ----------
 async function handleTopupConfig(request, env) {
   if (!env.CREDITS) return jsonResponse({ error: "Storage not configured" }, 503);
-  const wifPrice = await wifPriceUsd();
+  const wifPrice = await wifPriceUsd(env);
   const chains = {
     base: TOPUP_CHAINS.base,
     robinhood: {
@@ -604,7 +634,7 @@ async function handleTopupVerify(request, env) {
   // Token non-stablecoin ($WIF): nilai = jumlah token × harga pasar at-the-
   // moment. Feed down → tolak dengan retry (bukan salah-amount-claim).
   if (token.price_feed) {
-    const price = await wifPriceUsd();
+    const price = await wifPriceUsd(env);
     if (!price) {
       return jsonResponse(
         { error: "Price feed unavailable, retry verification shortly", code: "price_unavailable" },
