@@ -1188,7 +1188,7 @@ async function handleChat(request, env) {
   await bumpGlobalStats(env, usageTokens);
   await tbSendEvent(env, "chat_events", {
     timestamp: new Date().toISOString(),
-    id_type: id.slice(0, 2) === "w:" ? "wallet" : "ip",
+    id_type: uid.slice(0, 2) === "w:" ? "wallet" : "ip",
     wallet: wallet || null,
     tokens: usageTokens,
     model: "beam",
