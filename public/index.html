@@ -1965,7 +1965,10 @@
               <div class="dash-cols">
                 <article class="dash-card" aria-labelledby="topupTitle">
                   <h3 id="topupTitle" data-i18n="topup.title">Credit top-up</h3>
-                  <p data-i18n="topup.desc">Paid in crypto (stablecoin): USDC on Base or USDG on Robinhood Chain. 10 credits = $1 — 1 credit = 1 million tokens. Payment is verified on-chain and the credits go to the connected wallet.</p>
+                  <p data-i18n="topup.desc">Paid in crypto: USDC on Base, USDG or $WIF on Robinhood Chain. Stablecoins are credited 1:1; $WIF is credited at its live market rate. 10 credits = $1, 1 credit = 1 million tokens. Payment is verified on-chain and bonus credits go to the connected wallet.</p>
+                  <span data-i18n="tier.active" hidden>$WIF holder — +8 extra credits per day while you keep holding.</span>
+                  <span data-i18n="tier.locked" hidden>Hold ≥10,000 $WIF in your connected wallet for +8 extra credits per day (the unlock sticks around as long as you hold).</span>
+                  <p id="tierStatus" style="margin: 0 0 14px; font-size: 13px; color: var(--ink-2); text-align: center;"></p>
                   <div class="topup-amounts" role="group" data-i18n-attr="aria-label:topup.groupAria" aria-label="Choose a top-up amount">
                     <button class="topup-opt" type="button" data-credits="50" data-usd="5">5 USD<small data-i18n="topup.small10">50 credits · USDC/USDG</small></button>
                     <button class="topup-opt selected" type="button" data-credits="100" data-usd="10">10 USD<small data-i18n="topup.small25">100 credits · USDC/USDG</small></button>
@@ -2057,6 +2060,7 @@ model      beam</pre>
             <select class="pay-select" id="payChain">
               <option value="base|usdc">Base · USDC</option>
               <option value="robinhood|usdg">Robinhood Chain · USDG</option>
+              <option value="robinhood|wif">Robinhood Chain · $WIF</option>
             </select>
           </div>
           <div class="pay-instr">
@@ -2669,7 +2673,9 @@ model      beam</pre>
             "usage.tok2": "704 rb",
             "usage.tok3": "344 rb",
             "topup.title": "Top-up kredit",
-            "topup.desc": "Pilih paket contoh di bawah. Belum ada pembayaran sungguhan — tombol top-up tidak memproses transaksi apa pun dan saldo tidak akan berubah.",
+            "topup.desc": "Bayar dengan crypto: USDC di Base, USDG atau $WIF di Robinhood Chain. Stablecoin dikredit 1:1; $WIF dikredit sesuai harga pasar live. 10 credit = $1, 1 credit = 1 juta token. Pembayaran diverifikasi on-chain dan bonus credit masuk ke wallet tersambung.",
+            "tier.active": "Holder $WIF — +8 ekstra credit per hari selama kamu tetap menahan.",
+            "tier.locked": "Tahan ≥10.000 $WIF di wallet tersambung untuk +8 ekstra credit per hari (unlock berlaku selama kamu menahan).",
             "topup.groupAria": "Pilih jumlah top-up (contoh)",
             "topup.small10": "kredit · Rp 10.000",
             "topup.small25": "kredit · Rp 25.000",
@@ -2959,7 +2965,9 @@ model      beam</pre>
             "usage.tok2": "704 тыс.",
             "usage.tok3": "344 тыс.",
             "topup.title": "Пополнение кредитов",
-            "topup.desc": "Выберите примерный пакет ниже. Настоящей оплаты пока нет — кнопка пополнения не обрабатывает никаких транзакций, и баланс не изменится.",
+            "topup.desc": "Оплата в крипте: USDC на Base, USDG или $WIF на Robinhood Chain. Стейблкоины зачисляются 1:1; $WIF — по живому рыночному курсу. 10 кредитов = $1, 1 кредит = 1 млн токенов. Платёж проверяется on-chain, бонусные кредиты идут на подключённый кошелёк.",
+            "tier.active": "Держатель $WIF — +8 дополнительных кредитов в день, пока вы держите.",
+            "tier.locked": "Держите ≥10.000 $WIF на подключённом кошельке — +8 дополнительных кредитов в день (действует, пока держите).",
             "topup.groupAria": "Выбрать сумму пополнения (пример)",
             "topup.small10": "кредитов · Rp 10.000",
             "topup.small25": "кредитов · Rp 25.000",
@@ -3246,7 +3254,9 @@ model      beam</pre>
             "usage.tok2": "704 mil",
             "usage.tok3": "344 mil",
             "topup.title": "Recarga de créditos",
-            "topup.desc": "Elige un paquete de ejemplo abajo. Aún no hay pagos reales: el botón de recarga no procesa ninguna transacción y el saldo no cambiará.",
+            "topup.desc": "Pago en cripto: USDC en Base, USDG o $WIF en Robinhood Chain. Los stablecoins se acreditan 1:1; $WIF a su tasa de mercado en vivo. 10 créditos = $1, 1 crédito = 1 millón de tokens. El pago se verifica on-chain y los créditos bonus van al wallet conectado.",
+            "tier.active": "Holder de $WIF — +8 créditos extra al día mientras lo mantengas.",
+            "tier.locked": "Mantén ≥10.000 $WIF en el wallet conectado para +8 créditos extra al día (el desbloqueo dura mientras lo tengas).",
             "topup.groupAria": "Elegir importe de recarga (ejemplo)",
             "topup.small10": "créditos · Rp 10.000",
             "topup.small25": "créditos · Rp 25.000",
@@ -3533,7 +3543,9 @@ model      beam</pre>
             "usage.tok2": "704 k",
             "usage.tok3": "344 k",
             "topup.title": "Recharge de crédits",
-            "topup.desc": "Choisissez une offre d'exemple ci-dessous. Il n'y a pas encore de vrai paiement — le bouton de recharge ne traite aucune transaction et le solde ne changera pas.",
+            "topup.desc": "Paiement en crypto : USDC sur Base, USDG ou $WIF sur Robinhood Chain. Les stablecoins sont crédités 1:1 ; $WIF à son taux de marché en direct. 10 crédits = 1 $, 1 crédit = 1 million de tokens. Le paiement est vérifié on-chain et les crédits bonus vont au wallet connecté.",
+            "tier.active": "Détenteur de $WIF — +8 crédits par jour tant que vous gardez vos $WIF.",
+            "tier.locked": "Gardez ≥ 10 000 $WIF dans le wallet connecté pour +8 crédits par jour (le déverrouillage dure tant que vous les détenez).",
             "topup.groupAria": "Choisir un montant de recharge (exemple)",
             "topup.small10": "crédits · Rp 10.000",
             "topup.small25": "crédits · Rp 25.000",
@@ -3820,7 +3832,9 @@ model      beam</pre>
             "usage.tok2": "704 Tsd.",
             "usage.tok3": "344 Tsd.",
             "topup.title": "Credits aufladen",
-            "topup.desc": "Wähle unten ein Beispielpaket. Es gibt noch keine echte Zahlung — die Auflade-Schaltfläche verarbeitet keine Transaktion und das Guthaben ändert sich nicht.",
+            "topup.desc": "Bezahlung in Krypto: USDC auf Base, USDG oder $WIF auf Robinhood Chain. Stablecoins werden 1:1 gutgeschrieben; $WIF zum aktuellen Marktkurs. 10 Credits = 1 $, 1 Credit = 1 Mio. Token. Die Zahlung wird on-chain verifiziert, Bonus-Credits landen im verbundenen Wallet.",
+            "tier.active": "$WIF-Halter — +8 zusätzliche Credits pro Tag, solange du hältst.",
+            "tier.locked": "Halte ≥10.000 $WIF im verbundenen Wallet für +8 zusätzliche Credits pro Tag (gilt, solange du hältst).",
             "topup.groupAria": "Aufladebetrag wählen (Beispiel)",
             "topup.small10": "Credits · Rp 10.000",
             "topup.small25": "Credits · Rp 25.000",
@@ -6403,15 +6417,30 @@ model      beam</pre>
           .catch(function () { return cfg; });
       }
 
+      function unitsFor(token) {
+        if (token.price_feed && token.price_usd > 0) {
+          // $WIF: nilai USD pembayaran → jumlah bill token (harga live)
+          return BigInt(Math.round((pkg.usd / token.price_usd) * Math.pow(10, token.decimals)));
+        }
+        return BigInt(Math.round(pkg.usd * 1e6)); // stablecoin (decimals 6)
+      }
       function updateInstr() {
         if (!cfg) return;
         var sel = chainSel();
         var chain = cfg.chains && cfg.chains[sel.chain];
         var token = chain && chain.tokens && chain.tokens[sel.token];
         if (!token) return;
-        var units = pkg.usd * 1e6; // decimals 6
-        $("payAmt").textContent = (units / 1e6).toFixed(6) + " " + token.name +
-          "  →  " + pkg.credits + " credits";
+        var label = $("payInstrLabel");
+        if (token.price_feed) {
+          // Rate pasar: jumlah kirim ≈ paket; credit = nilai pasar riil harian
+          var amt = pkg.usd / (token.price_usd || 0.001);
+          var shown = amt >= 1000 ? Math.round(amt).toLocaleString("en-US") : amt.toFixed(2);
+          $("payAmt").textContent = "~" + shown + " " + token.name + "  →  " + pkg.credits + " credits";
+          label.textContent = "Send this approximate amount (live market rate — the credited credits follow the actual $ value received):";
+        } else {
+          $("payAmt").textContent = pkg.usd.toFixed(6) + " " + token.name + "  →  " + pkg.credits + " credits";
+          label.textContent = "Send exactly this amount to the echo treasury:";
+        }
         $("payAddr").textContent = cfg.treasury;
       }
 
@@ -6489,7 +6518,7 @@ model      beam</pre>
           setStatus("Payment config is not loaded yet — try again.", true);
           return;
         }
-        var units = BigInt(Math.round(pkg.usd * 1e6));
+        var units = unitsFor(token);
         var pad64 = function (hex) { return hex.slice(2).padStart(64, "0"); };
         var addr = cfg.treasury.toLowerCase().replace(/^0x/, "");
         var data = "0xa9059cbb" + pad64("0x" + addr) + pad64("0x" + units.toString(16));
@@ -6952,6 +6981,17 @@ model      beam</pre>
 
       function paint(d) {
         if (!d || d.enforced !== true) return; // tanpa KV (local preview): biarkan sample
+        var tierEl = document.getElementById("tierStatus");
+        if (tierEl) {
+          // tier $WIF: tampil hanya untuk wallet (IP-anon → kuota standard)
+          if (d.id_type === "wallet") {
+            tierEl.textContent = d.wif_holder
+              ? window.ECHO_T("tier.active")
+              : window.ECHO_T("tier.locked");
+          } else {
+            tierEl.textContent = "";
+          }
+        }
         var cards = dashPage.querySelectorAll(".stat-grid .stat-card");
         if (!cards.length) return;
         // Sisa = kuota efektif (gratis harian 2 credit + bonus purchased) − 

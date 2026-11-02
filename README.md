@@ -39,6 +39,25 @@ in the environment when running, or put it in a `.env` file in the
 repo root — server.js loads it (simple KEY=VALUE parser, no
 dependency; pre-set environment wins). Never commit a real key.
 
+## $WIF payments & holding tier
+
+`$WIF` (World is Flat, ERC-20 on Robinhood Chain, contract
+`0x5173b8ea6923c2d40267890d45c46a3480954773`) is a third payment option
+next to USDC/USDG:
+
+- Credits are granted at the token's live market rate (CoinGecko,
+  60s cache): $1 of $WIF = $1 of credits, 1:1 parity with the stablecoins.
+  Payments are verified with the same ERC-20 `Transfer`-log check to the
+  treasury; the transaction marker TTL is 30 days like the other tokens.
+- **Holding tier**: keeping ≥ 10,000 $WIF in the connected wallet raises
+  the free daily allowance from 2 to 10 credits/day while the tokens
+  stay held. The balance is checked via `balanceOf` on a public RPC and
+  cached for 24h (`tier:<wallet>` KV), re-checked after every top-up.
+  Burn order: free daily (+tier) first, then purchased bonus credits.
+
+$WIF is optional — the free daily credits and USDC/USDG top-ups stay
+available to everyone.
+
 ## Public API (OpenAI-compatible)
 
 Create API keys in the dashboard (`#/dashboard`, wallet must be connected).

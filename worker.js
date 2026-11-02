@@ -38,9 +38,98 @@ const TOPUP_CHAINS = {
     rpc: "https://rpc.mainnet.chain.robinhood.com/",
     tokens: {
       usdg: { name: "USDG", decimals: 6, contract: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" },
+      // $WIF (World is Flat) — fee-token Echo. Credit = nilai USD pasar
+      // (CoinGecko) ÷ USD_PER_CREDIT — paritas 1:1 dengan USDC/USDG.
+      wif: {
+        name: "$WIF",
+        decimals: 18,
+        contract: "0x5173b8ea6923c2d40267890d45c46a3480954773",
+        price_feed: { coingecko_id: "world-is-flat" },
+      },
     },
   },
 };
+
+// ---------- $WIF holding tier (unlock kuota harian) ----------
+// Holder ≥ WIF_HOLD_MIN di wallet yang tersambung → +TIER_DAILY bonus
+// credits/hari (limit harian lebih besar, bukan bonus purchased). Cek
+// balanceOf via public RPC, cache 24h (sesuai ritme reset harian).
+const WIF_HOLD_MIN = 10000;
+const TIER_DAILY_BONUS = 8 * TOKENS_PER_CREDIT; // +8 credit/hari
+const TIER_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
+
+function tierKey(wallet) {
+  return "tier:" + wallet;
+}
+async function readTier(env, wallet) {
+  if (!env.CREDITS || !wallet) return { holder: false, bonusTokens: 0, enforced: false, stale: true };
+  let rec;
+  try {
+    rec = await env.CREDITS.get(tierKey(wallet), "json");
+  } catch {
+    rec = null;
+  }
+  const at = rec && Number(rec.at) > 0 ? Number(rec.at) : 0;
+  if (at > 0 && Date.now() - at < TIER_CHECK_TTL_MS) {
+    const holder = !!rec.holder;
+    return { holder, bonusTokens: holder ? TIER_DAILY_BONUS : 0, enforced: true, stale: false };
+  }
+  return { holder: false, bonusTokens: 0, enforced: true, stale: true };
+}
+async function refreshTier(env, wallet) {
+  const wif = TOPUP_CHAINS.robinhood.tokens.wif;
+  const data = "0x70a08231" + padAddress(wallet); // balanceOf(address)
+  const res = await rpcCall(TOPUP_CHAINS.robinhood.rpc, "eth_call", [{ to: wif.contract, data }, "latest"]);
+  if (!res.result) return null; // RPC gagal: pertahankan cache lama / default
+  const raw = hexToNumberSafe(res.result);
+  const balance = raw === null ? 0 : Number(raw) / Math.pow(10, wif.decimals);
+  const holder = balance >= WIF_HOLD_MIN;
+  try {
+    await env.CREDITS.put(tierKey(wallet), JSON.stringify({ holder, at: Date.now() }), {
+      expirationTtl: 2 * 24 * 60 * 60,
+    });
+  } catch {
+    // best-effort
+  }
+  return { holder, bonusTokens: holder ? TIER_DAILY_BONUS : 0, enforced: true, stale: false };
+}
+// Cache expired → refresh (1 RPC/user/hari); RPC gagal → fallback no-tier.
+async function getTier(env, wallet) {
+  const t = await readTier(env, wallet);
+  if (!t.enforced || !t.stale || !wallet || !env.CREDITS) return t;
+  const fresh = await refreshTier(env, wallet);
+  return fresh || t;
+}
+
+// ---------- harga $WIF (CoinGecko, cache 60s per isolate) ----------
+const WIF_PRICE_TTL_MS = 60 * 1000;
+const wifPriceCache = { usd: 0, at: 0 };
+let wifPricePending = null;
+async function wifPriceUsd() {
+  const now = Date.now();
+  if (wifPriceCache.usd > 0 && now - wifPriceCache.at < WIF_PRICE_TTL_MS) {
+    return wifPriceCache.usd;
+  }
+  if (wifPricePending) return wifPricePending;
+  wifPricePending = (async () => {
+    try {
+      const r = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=world-is-flat&vs_currencies=usd"
+      );
+      if (r.ok) {
+        const j = await r.json();
+        const p = j && j["world-is-flat"] && Number(j["world-is-flat"].usd);
+        if (p > 0) wifPriceCache.usd = p;
+        wifPriceCache.at = Date.now();
+      }
+    } catch {
+      // feed down: biarkan stale / null di return
+    }
+    wifPricePending = null;
+    return wifPriceCache.usd > 0 ? wifPriceCache.usd : null;
+  })();
+  return wifPricePending;
+}
 const TOPUP_PACKAGES = [
   { credits: 50, usd: 5 },
   { credits: 100, usd: 10 },
@@ -201,6 +290,7 @@ async function handleCredits(request, env) {
   const id = await userIdentity(request);
   const usage = await readUsage(env, id);
   const wallet = walletIdentity(request);
+  const tierRec = wallet ? await getTier(env, wallet) : { holder: false, bonusTokens: 0, enforced: false };
   const bonusRec = wallet ? await readBonus(env, wallet) : { bonus: 0, enforced: false };
   const bonus = bonusRec.bonus;
   return jsonResponse(
@@ -212,9 +302,11 @@ async function handleCredits(request, env) {
       tokens_used: usage.tokens,
       chats: usage.chats,
       credits_used: usage.tokens / TOKENS_PER_CREDIT,
+      wif_holder: tierRec.holder,
+      tier_bonus_credits: tierRec.bonusTokens / TOKENS_PER_CREDIT,
       bonus_credits: bonus / TOKENS_PER_CREDIT,
       bonus_tokens: bonus,
-      effective_limit: (DAILY_CREDIT_LIMIT + bonus) / TOKENS_PER_CREDIT,
+      effective_limit: (DAILY_CREDIT_LIMIT + tierRec.bonusTokens + bonus) / TOKENS_PER_CREDIT,
       enforced: usage.enforced,
     },
     200
@@ -314,6 +406,17 @@ async function handleStats(request, env) {
 // ---------- top-up crypto ----------
 async function handleTopupConfig(request, env) {
   if (!env.CREDITS) return jsonResponse({ error: "Storage not configured" }, 503);
+  const wifPrice = await wifPriceUsd();
+  const chains = {
+    base: TOPUP_CHAINS.base,
+    robinhood: {
+      ...TOPUP_CHAINS.robinhood,
+      tokens: {
+        usdg: TOPUP_CHAINS.robinhood.tokens.usdg,
+        wif: { ...TOPUP_CHAINS.robinhood.tokens.wif, price_usd: wifPrice },
+      },
+    },
+  };
   return jsonResponse(
     {
       treasury: TOPUP_TREASURY,
@@ -321,7 +424,7 @@ async function handleTopupConfig(request, env) {
       tokens_per_credit: TOKENS_PER_CREDIT,
       min_purchase_usd: MIN_PURCHASE_USD,
       packages: TOPUP_PACKAGES,
-      chains: TOPUP_CHAINS,
+      chains,
     },
     200
   );
@@ -436,7 +539,19 @@ async function handleTopupVerify(request, env) {
   if (units === null || units <= 0n) {
     return jsonResponse({ error: "No transfer amount found", code: "no_amount" }, 400);
   }
-  const usd = Number(units) / Math.pow(10, token.decimals);
+  let usd = Number(units) / Math.pow(10, token.decimals);
+  // Token non-stablecoin ($WIF): nilai = jumlah token × harga pasar at-the-
+  // moment. Feed down → tolak dengan retry (bukan salah-amount-claim).
+  if (token.price_feed) {
+    const price = await wifPriceUsd();
+    if (!price) {
+      return jsonResponse(
+        { error: "Price feed unavailable, retry verification shortly", code: "price_unavailable" },
+        503
+      );
+    }
+    usd = (Number(units) / Math.pow(10, token.decimals)) * price;
+  }
   if (usd < MIN_PURCHASE_USD) {
     return jsonResponse(
       { error: `Minimum purchase is $${MIN_PURCHASE_USD.toFixed(2)}`, code: "too_small", usd },
@@ -446,6 +561,13 @@ async function handleTopupVerify(request, env) {
   const credits = Math.floor(usd / USD_PER_CREDIT); // 10 credits per USD
   const tokensGranted = credits * TOKENS_PER_CREDIT;
   await grantBonus(env, claimWallet, tokensGranted);
+  // Tier holding di-refresh pasca-grant: pembayaran $WIF memberi unlock instan
+  // (dan pembayaran token lain memberi pengecekan $WIF gratis).
+  try {
+    await refreshTier(env, claimWallet);
+  } catch {
+    // best-effort
+  }
   await env.CREDITS.put(
     marker,
     JSON.stringify({ wallet: claimWallet, credits, tokensGranted, at: Date.now() }),
@@ -677,8 +799,8 @@ async function handleV1Models() {
 }
 
 // Pembukuan bersama untuk /v1 (JSON & SSE): usage harian, stats global,
-// last_used key, dan burn bonus untuk overflow di atas kuota gratis.
-async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens) {
+// last_used key, dan burn bonus untuk overflow di atas free daily + tier.
+async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens, freeDaily) {
   await addUsage(env, uid, usageTokens);
   await bumpGlobalStats(env, usageTokens);
   // last_used best-effort (satu KV write per request)
@@ -687,8 +809,8 @@ async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens) {
       w: wallet, u: new Date().toISOString().slice(0, 10),
     }));
   } catch { /* best-effort */ }
-  const overflowPrev = Math.max(0, prevUsage.tokens - DAILY_CREDIT_LIMIT);
-  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - DAILY_CREDIT_LIMIT);
+  const overflowPrev = Math.max(0, prevUsage.tokens - freeDaily);
+  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - freeDaily);
   if (overflowNow > overflowPrev) {
     await spendBonusTokens(env, wallet, overflowNow - overflowPrev);
   }
@@ -710,8 +832,10 @@ async function handleV1Chat(request, env, ctx) {
   const wallet = auth.wallet;
   const uid = "w:" + wallet;
   const prevUsage = await readUsage(env, uid);
+  const tierRec = await getTier(env, wallet);
   const bonusRec = await readBonus(env, wallet);
-  const totalLimit = DAILY_CREDIT_LIMIT + bonusRec.bonus;
+  const freeDaily = DAILY_CREDIT_LIMIT + tierRec.bonusTokens;
+  const totalLimit = freeDaily + bonusRec.bonus;
   if (prevUsage.enforced && prevUsage.tokens >= totalLimit) {
     return openAIError("Credit balance exhausted. Top up with crypto on the dashboard.", 402);
   }
@@ -764,7 +888,7 @@ async function handleV1Chat(request, env, ctx) {
           const usageTokens = finalUsage || Math.ceil(estimateChars / 4);
           try {
             if (usageTokens > 0) {
-              await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
+              await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens, freeDaily);
             }
           } catch { /* best-effort */ }
           resolveBill();
@@ -822,7 +946,7 @@ async function handleV1Chat(request, env, ctx) {
     data && data.usage && Number(data.usage.total_tokens)
       ? Number(data.usage.total_tokens)
       : Math.ceil((JSON.stringify(data).length || 0) / 4);
-  await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens);
+  await billV1Usage(env, uid, wallet, auth.key, prevUsage, usageTokens, freeDaily);
   return withCors(jsonResponse(data, 200));
 }
 
@@ -843,8 +967,12 @@ async function handleChat(request, env) {
   const uid = await userIdentity(request);
   const prevUsage = await readUsage(env, uid);
   const wallet = walletIdentity(request);
+  const tierRec = wallet ? await getTier(env, wallet) : { holder: false, bonusTokens: 0, enforced: false };
   const bonusRec = wallet ? await readBonus(env, wallet) : { bonus: 0, enforced: false };
-  const totalLimit = DAILY_CREDIT_LIMIT + bonusRec.bonus;
+  // Free daily = kuota gratis harian + tier $WIF (limit lebih besar, bukan
+  // bonus purchased); bonus dipotong atas overflow setelah free daily+tier.
+  const freeDaily = DAILY_CREDIT_LIMIT + tierRec.bonusTokens;
+  const totalLimit = freeDaily + bonusRec.bonus;
   if (prevUsage.enforced && prevUsage.tokens >= totalLimit) {
     const withWallet = !!wallet;
     return jsonResponse(
@@ -904,8 +1032,8 @@ async function handleChat(request, env) {
   await bumpGlobalStats(env, usageTokens);
   // Bonus dipotong sebesar delta melewati kuota gratis (incremental —
   // overflow dari request sebelumnya sudah dibayar dan tidak dihitung ulang).
-  const overflowPrev = Math.max(0, prevUsage.tokens - DAILY_CREDIT_LIMIT);
-  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - DAILY_CREDIT_LIMIT);
+  const overflowPrev = Math.max(0, prevUsage.tokens - freeDaily);
+  const overflowNow = Math.max(0, prevUsage.tokens + usageTokens - freeDaily);
   if (overflowNow > overflowPrev) {
     await spendBonusTokens(env, wallet, overflowNow - overflowPrev);
   }
