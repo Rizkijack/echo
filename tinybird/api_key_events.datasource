@@ -1,0 +1,11 @@
+DESCRIPTION >
+    api_key_events — /v1 usage per API key (masked, never raw).
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `wallet` String `json:$.wallet`,
+    `key_masked` String `json:$.key_masked`,
+    `tokens` UInt64 `json:$.tokens`
+ENGINE >
+    MergeTree
+ENGINE_SORTING_KEY >
+    timestamp, wallet

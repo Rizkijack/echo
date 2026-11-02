@@ -1,0 +1,15 @@
+DESCRIPTION >
+    topup_events — verified on-chain top-ups. 1 row = 1 granted payment.
+SCHEMA >
+    `timestamp` DateTime `json:$.timestamp`,
+    `wallet` String `json:$.wallet`,
+    `chain` LowCardinality(String) `json:$.chain`,
+    `token` String `json:$.token`,
+    `usd` Float32 `json:$.usd`,
+    `credits` UInt32 `json:$.credits`,
+    `tokens_granted` UInt64 `json:$.tokens_granted`,
+    `tx_marker` String `json:$.tx_marker`
+ENGINE >
+    MergeTree
+ENGINE_SORTING_KEY >
+    timestamp, wallet

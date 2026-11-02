@@ -50,6 +50,30 @@ const TOPUP_CHAINS = {
   },
 };
 
+// ---------- Tinybird analytics (Events API, fetch-direct — tanpa SDK) ----------
+// Secret: TINYBIRD_TOKEN (bearer), TINYBIRD_HOST (opsional; default api.
+// tinybird.co — region US legacy. EU/AWS workspace: set host sesuai).
+// Best-effort: analytics TIDAK PERNAH membuat chat/topup gagal.
+function tbHost(env) {
+  return String(env.TINYBIRD_HOST || "https://api.tinybird.co").replace(/\/+$/, "");
+}
+async function tbSendEvent(env, name, row) {
+  if (!env || !env.TINYBIRD_TOKEN || !row) return; // belum dikonfigurasi: no-op
+  try {
+    await fetch(tbHost(env) + "/v0/events?name=" + encodeURIComponent(name), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.TINYBIRD_TOKEN}`,
+        "Content-Type": "application/x-ndjson",
+      },
+      body: JSON.stringify(row),
+    });
+  } catch {
+    // diam: analytics jangan ganggu jalur utama
+  }
+}
+
+
 // ---------- $WIF holding tier (unlock kuota harian) ----------
 // Holder ≥ WIF_HOLD_MIN di wallet yang tersambung → +TIER_DAILY bonus
 // credits/hari (limit harian lebih besar, bukan bonus purchased). Cek
@@ -111,6 +135,13 @@ async function refreshTier(env, wallet) {
   const raw = hexToNumberSafe(res.result);
   const balance = raw === null ? 0 : Number(raw) / Math.pow(10, wif.decimals);
   const holder = balance >= WIF_HOLD_MIN;
+  // snapshot tier → analytics (juga bekerja saat holder=false)
+  await tbSendEvent(env, "tier_events", {
+    timestamp: new Date().toISOString(),
+    wallet,
+    holder,
+    wif_balance: Math.round(balance),
+  });
   try {
     await env.CREDITS.put(tierKey(wallet), JSON.stringify({ holder, at: Date.now() }), {
       expirationTtl: 2 * 24 * 60 * 60,
@@ -658,6 +689,16 @@ async function handleTopupVerify(request, env) {
   const credits = Math.floor(usd / USD_PER_CREDIT); // 10 credits per USD
   const tokensGranted = credits * TOKENS_PER_CREDIT;
   await grantBonus(env, claimWallet, tokensGranted);
+  await tbSendEvent(env, "topup_events", {
+    timestamp: new Date().toISOString(),
+    wallet: claimWallet,
+    chain: chain.key,
+    token: token.name,
+    usd: Math.round(usd * 10000) / 10000,
+    credits,
+    tokens_granted: tokensGranted,
+    tx_marker: marker,
+  });
   // Tier holding di-refresh pasca-grant: pembayaran $WIF memberi unlock instan
   // (dan pembayaran token lain memberi pengecekan $WIF gratis).
   try {
@@ -900,6 +941,20 @@ async function handleV1Models() {
 async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens, freeDaily) {
   await addUsage(env, uid, usageTokens);
   await bumpGlobalStats(env, usageTokens);
+  await tbSendEvent(env, "chat_events", {
+    timestamp: new Date().toISOString(),
+    id_type: "wallet",
+    wallet,
+    tokens: usageTokens,
+    model: "beam",
+    source: "api",
+  });
+  await tbSendEvent(env, "api_key_events", {
+    timestamp: new Date().toISOString(),
+    wallet,
+    key_masked: String(apiKey).slice(0, 7) + "…" + String(apiKey).slice(-4),
+    tokens: usageTokens,
+  });
   // last_used best-effort (satu KV write per request)
   try {
     await env.KEYS.put(keyLookupKey(apiKey), JSON.stringify({
@@ -1127,6 +1182,14 @@ async function handleChat(request, env) {
       : Math.ceil((JSON.stringify(data).length || 0) / 4);
   await addUsage(env, uid, usageTokens);
   await bumpGlobalStats(env, usageTokens);
+  await tbSendEvent(env, "chat_events", {
+    timestamp: new Date().toISOString(),
+    id_type: id.slice(0, 2) === "w:" ? "wallet" : "ip",
+    wallet: wallet || null,
+    tokens: usageTokens,
+    model: "beam",
+    source: "app",
+  });
   // Bonus dipotong sebesar delta melewati kuota gratis (incremental —
   // overflow dari request sebelumnya sudah dibayar dan tidak dihitung ulang).
   const overflowPrev = Math.max(0, prevUsage.tokens - freeDaily);
