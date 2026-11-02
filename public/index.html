@@ -2078,6 +2078,11 @@ model      beam</pre>
               <button class="btn btn-ghost" id="payCopy" type="button" style="padding: 6px 14px; font-size: 12px;">Copy address</button>
             </div>
           </div>
+          <div id="payCaRow" style="display: none; margin-top: 12px; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--ink-3);">
+            <span data-i18n="wif.contractLbl">$WIF contract</span>
+            <code id="payCaAddr" style="font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; text-align: center;">0x…</code>
+            <button class="btn btn-ghost" id="btnPayCaCopy" type="button" style="padding: 4px 10px; font-size: 11px; flex: 0 0 auto;">Copy</button>
+          </div>
           <button class="btn btn-primary" id="btnPayNow" type="button" style="width: 100%;">Pay via wallet</button>
           <div style="margin-top: 14px; font-size: 12px; color: var(--ink-3);">Already paid from another app or wallet? Paste the transaction hash:</div>
           <div style="display: flex; gap: 6px; margin-top: 6px;">
@@ -2688,6 +2693,7 @@ model      beam</pre>
             "topup.small25": "100 credit · USDC/USDG/$WIF",
             "topup.small50": "250 credit · USDC/USDG/$WIF",
             "wif.rateLbl": "Kurs $WIF live",
+            "wif.contractLbl": "Contract $WIF",
             "topup.note": "Harga dan paket di atas hanya contoh tampilan.",
             "backup.title": "Backup percakapan",
             "backup.desc": "Salinan cadangan riwayat chat dan pengaturan akun (status di bawah adalah contoh).",
@@ -2981,6 +2987,7 @@ model      beam</pre>
             "topup.small25": "100 кредитов · USDC/USDG/$WIF",
             "topup.small50": "250 кредитов · USDC/USDG/$WIF",
             "wif.rateLbl": "Курс $WIF ( live)",
+            "wif.contractLbl": "Контракт $WIF",
             "topup.note": "Цены и пакеты выше — только пример оформления.",
             "backup.title": "Резервная копия диалогов",
             "backup.desc": "Резервная копия истории чатов и настроек аккаунта (статус ниже — пример).",
@@ -3271,6 +3278,7 @@ model      beam</pre>
             "topup.small25": "100 créditos · USDC/USDG/$WIF",
             "topup.small50": "250 créditos · USDC/USDG/$WIF",
             "wif.rateLbl": "Tasa $WIF en vivo",
+            "wif.contractLbl": "Contrato de $WIF",
             "topup.note": "Los precios y planes de arriba son solo ejemplos de visualización.",
             "backup.title": "Copia de seguridad de conversaciones",
             "backup.desc": "Una copia de seguridad del historial de chats y los ajustes de la cuenta (el estado de abajo es un ejemplo).",
@@ -3561,6 +3569,7 @@ model      beam</pre>
             "topup.small25": "100 crédits · USDC/USDG/$WIF",
             "topup.small50": "250 crédits · USDC/USDG/$WIF",
             "wif.rateLbl": "Taux $WIF en direct",
+            "wif.contractLbl": "Contrat $WIF",
             "topup.note": "Les prix et offres ci-dessus ne sont que des exemples d'affichage.",
             "backup.title": "Sauvegarde des conversations",
             "backup.desc": "Une copie de sauvegarde de l'historique des chats et des réglages du compte (le statut ci-dessous est un exemple).",
@@ -3851,6 +3860,7 @@ model      beam</pre>
             "topup.small25": "100 Credits · USDC/USDG/$WIF",
             "topup.small50": "250 Credits · USDC/USDG/$WIF",
             "wif.rateLbl": "$WIF-Livekurs",
+            "wif.contractLbl": "$WIF-Vertrag",
             "topup.note": "Die Preise und Pakete oben sind nur Darstellungsbeispiele.",
             "backup.title": "Gesprächs-Backup",
             "backup.desc": "Eine Sicherungskopie von Chatverlauf und Kontoeinstellungen (der Status unten ist ein Beispiel).",
@@ -6454,6 +6464,17 @@ model      beam</pre>
           label.textContent = "Send exactly this amount to the echo treasury:";
         }
         $("payAddr").textContent = cfg.treasury;
+        var caRow = document.getElementById("payCaRow");
+        if (caRow) {
+          // CA/token contract tampil di samping hanya untuk token price-feed
+          // ($WIF) — stablecoin usd di-trungga bersama.
+          if (token.price_feed) {
+            caRow.style.display = "flex";
+            document.getElementById("payCaAddr").textContent = token.contract;
+          } else {
+            caRow.style.display = "none";
+          }
+        }
       }
 
       function open(p) {
@@ -6581,6 +6602,15 @@ model      beam</pre>
         }
       });
       $("btnPayNow").addEventListener("click", payNow);
+      $("btnPayCaCopy").addEventListener("click", function () {
+        var ca = $("payCaAddr").textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(ca).then(function () {
+            $("btnPayCaCopy").textContent = "Copied!";
+            setTimeout(function () { $("btnPayCaCopy").textContent = "Copy"; }, 1200);
+          });
+        }
+      });
       $("btnPayVerify").addEventListener("click", function () { pollTries = 0; verifyTx($("payHash").value); });
       document.addEventListener("keydown", function (ev) {
         if (ev.key === "Escape" && modal.classList.contains("on")) close();
