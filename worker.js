@@ -101,10 +101,46 @@ async function getTier(env, wallet) {
   return fresh || t;
 }
 
-// ---------- harga $WIF (CoinGecko, cache 60s per isolate) ----------
+// ---------- harga $WIF (cache 60s per isolate) ----------
+// Primary: DexScreener (free, no key, CF-friendly) — pair DEX Robinhood
+// ($WIF/ETH + $WIF/USDG); pick pair terlikuid. Fallback: CoinGecko id
+// "world-is-flat". Feed down → null → verifikasi harga skip (retry).
 const WIF_PRICE_TTL_MS = 60 * 1000;
 const wifPriceCache = { usd: 0, at: 0 };
 let wifPricePending = null;
+const WIF_DS_URL = "https://api.dexscreener.com/latest/dex/tokens/0x5173b8ea6923c2d40267890d45c46a3480954773";
+
+async function fetchWifPrice() {
+  try {
+    const r = await fetch(WIF_DS_URL);
+    if (r.ok) {
+      const j = await r.json();
+      let best = null;
+      for (const p of (j && j.pairs) || []) {
+        const liq = (p && p.liquidity && Number(p.liquidity.usd)) || 0;
+        const price = (p && p.priceUsd && Number(p.priceUsd)) || 0;
+        if (price > 0 && liq > 0 && (!best || liq > best.liq)) best = { price, liq };
+      }
+      if (best) return best.price;
+    }
+  } catch {
+    // lanjut ke fallback
+  }
+  try {
+    const r2 = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=world-is-flat&vs_currencies=usd"
+    );
+    if (r2.ok) {
+      const j2 = await r2.json();
+      const p2 = j2 && j2["world-is-flat"] && Number(j2["world-is-flat"].usd);
+      if (p2 > 0) return p2;
+    }
+  } catch {
+    // feed mati semua
+  }
+  return null;
+}
+
 async function wifPriceUsd() {
   const now = Date.now();
   if (wifPriceCache.usd > 0 && now - wifPriceCache.at < WIF_PRICE_TTL_MS) {
@@ -113,17 +149,13 @@ async function wifPriceUsd() {
   if (wifPricePending) return wifPricePending;
   wifPricePending = (async () => {
     try {
-      const r = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=world-is-flat&vs_currencies=usd"
-      );
-      if (r.ok) {
-        const j = await r.json();
-        const p = j && j["world-is-flat"] && Number(j["world-is-flat"].usd);
-        if (p > 0) wifPriceCache.usd = p;
+      const p = await fetchWifPrice();
+      if (p > 0) {
+        wifPriceCache.usd = p;
         wifPriceCache.at = Date.now();
       }
     } catch {
-      // feed down: biarkan stale / null di return
+      // biarkan stale / null
     }
     wifPricePending = null;
     return wifPriceCache.usd > 0 ? wifPriceCache.usd : null;
