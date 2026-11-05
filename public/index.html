@@ -2037,6 +2037,31 @@
         .api-key-box code::after { animation: none; }
       }
 
+      /* ---------- kontrol soundtrack (CC0 ambient loop) ---------- */
+      .sound-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; flex: none; align-self: center; padding: 0;
+        background: rgba(6, 12, 24, 0.7); color: var(--ink);
+        border: 1px solid rgba(140, 190, 255, 0.28); border-radius: 2px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+      .sound-btn:hover { border-color: var(--accent); background: rgba(255, 182, 92, 0.08); }
+      .sound-btn svg { width: 16px; height: 16px; }
+      .sound-btn .snd-slash { display: none; }
+      .sound-btn[aria-pressed="false"] .snd-wave { display: none; }
+      .sound-btn[aria-pressed="false"] .snd-slash { display: block; }
+      .sound-btn[aria-pressed="true"] {
+        color: var(--accent);
+        border-color: rgba(255, 182, 92, 0.5);
+        box-shadow: 0 0 14px rgba(255, 182, 92, 0.14);
+      }
+      .sound-btn.playing .snd-wave { animation: sndWave 1.9s ease-in-out infinite; }
+      @keyframes sndWave { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) {
+        .sound-btn.playing .snd-wave { animation: none; }
+      }
+
     </style>
   </head>
   <body>
@@ -2089,6 +2114,9 @@
             </a>
             <span class="pill-section" id="pillSection" data-current="Home" aria-hidden="true">Home</span>
             <div class="home-nav-links">
+              <button class="sound-btn" type="button" data-sound-toggle aria-pressed="true" aria-label="Soundtrack" title="Soundtrack">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4v-5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="snd-wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="snd-slash" d="m16 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              </button>
               <div class="lang-switch" data-lang-switch>
                 <button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-attr="title:lang.title" title="Language">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.3 2.3 3.4 5.2 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.2-3.4-8.5s1.1-6.2 3.4-8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -2473,6 +2501,9 @@
         <div class="app-main">
           <header class="topbar">
             <span class="topbar-title" id="chatTitle" data-i18n="chat.title">New conversation</span>
+            <button class="sound-btn" type="button" data-sound-toggle aria-pressed="true" aria-label="Soundtrack" title="Soundtrack">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4v-5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="snd-wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="snd-slash" d="m16 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            </button>
             <div class="lang-switch" data-lang-switch>
               <button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-attr="title:lang.title" title="Language">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.3 2.3 3.4 5.2 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.2-3.4-8.5s1.1-6.2 3.4-8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -2603,6 +2634,9 @@
                 <p class="sub" data-i18n="dash.sub">Account summary, usage per model, credits, backups, and settings — on one page, in the same style as the chat page.</p>
               </div>
               <span class="spacer"></span>
+              <button class="sound-btn" type="button" data-sound-toggle aria-pressed="true" aria-label="Soundtrack" title="Soundtrack">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4v-5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="snd-wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="snd-slash" d="m16 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+              </button>
               <div class="lang-switch" data-lang-switch>
                 <button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-attr="title:lang.title" title="Language">
                   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.3 2.3 3.4 5.2 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.2-3.4-8.5s1.1-6.2 3.4-8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -2828,6 +2862,9 @@ model      beam</pre>
               <h1>Docs — Building with Reflection Beam</h1>
               <p class="sub">Beam is Reflection's open-weight model for coding, reasoning, and long-horizon agentic work.</p>
               <div class="docs-head-actions">
+                <button class="sound-btn" type="button" data-sound-toggle aria-pressed="true" aria-label="Soundtrack" title="Soundtrack">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4v-5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path class="snd-wave" d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path class="snd-slash" d="m16 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                </button>
                 <div class="lang-switch" data-lang-switch>
                   <button class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-attr="title:lang.title" title="Language">
                     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 12h17M12 3.5c2.3 2.3 3.4 5.2 3.4 8.5s-1.1 6.2-3.4 8.5c-2.3-2.3-3.4-5.2-3.4-8.5s1.1-6.2 3.4-8.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
@@ -8176,6 +8213,165 @@ model      beam</pre>
       maybeBoot();
       window.addEventListener("hashchange", maybeBoot);
     })();
+    </script>
+
+    <audio id="echo-bgm" src="audio/lights-at-night.mp3" loop preload="none" aria-hidden="true"></audio>
+    <script>
+      (function () {
+        var audio = document.getElementById("echo-bgm");
+        if (!audio) return;
+
+        var KEY = "echo-bgm";
+        var VOLUME = 0.22;
+        var FADE_MS = 700;
+        var LABELS = {
+          en: ["Play soundtrack", "Pause soundtrack"],
+          id: ["Putar musik", "Jeda musik"],
+          ru: ["Включить музыку", "Приостановить музыку"],
+          es: ["Reproducir música", "Pausar música"],
+          fr: ["Lire la musique", "Mettre la musique en pause"],
+          de: ["Musik abspielen", "Musik pausieren"]
+        };
+
+        var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-sound-toggle]"));
+        var enabled = true;
+        var fadeTimer = 0;
+        var armed = false;
+        var resumeAfterHidden = false;
+
+        try { enabled = window.localStorage.getItem(KEY) !== "off"; } catch (e) { /* pakai default */ }
+
+        function currentLang() {
+          var l = "";
+          try {
+            l = (window.ECHO_LANG && window.ECHO_LANG()) ||
+              window.localStorage.getItem("echo-lang") ||
+              document.documentElement.lang ||
+              "en";
+          } catch (e) { /* abaikan */ }
+          return LABELS[l] ? l : "en";
+        }
+
+        function paint() {
+          var labels = LABELS[currentLang()];
+          for (var i = 0; i < buttons.length; i++) {
+            var b = buttons[i];
+            b.setAttribute("aria-pressed", enabled ? "true" : "false");
+            b.setAttribute("aria-label", enabled ? labels[1] : labels[0]);
+            b.title = enabled ? labels[1] : labels[0];
+            b.classList.toggle("playing", enabled && !audio.paused);
+          }
+        }
+
+        function fadeTo(target, done) {
+          clearInterval(fadeTimer);
+          var from = audio.volume;
+          var t0 = Date.now();
+          fadeTimer = setInterval(function () {
+            var k = Math.min(1, (Date.now() - t0) / FADE_MS);
+            audio.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+            if (k >= 1) {
+              clearInterval(fadeTimer);
+              if (done) done();
+            }
+          }, 40);
+        }
+
+        function start() {
+          if (!enabled) return;
+          if (!audio.paused) {
+            fadeTo(VOLUME);
+            paint();
+            return;
+          }
+          audio.volume = 0;
+          var p = audio.play();
+          if (p && p.then) {
+            p.then(function () {
+              disarm();
+              fadeTo(VOLUME);
+              paint();
+            }).catch(function () {
+              paint();
+              arm();
+            });
+          } else {
+            disarm();
+            fadeTo(VOLUME);
+            paint();
+          }
+        }
+
+        function stop() {
+          fadeTo(0, function () { audio.pause(); });
+          paint();
+        }
+
+        function setEnabled(next) {
+          enabled = next;
+          try { window.localStorage.setItem(KEY, enabled ? "on" : "off"); } catch (e) { /* abaikan */ }
+          if (enabled) {
+            start();
+          } else {
+            disarm();
+            stop();
+          }
+          paint();
+        }
+
+        function onGesture(e) {
+          if (!enabled) { disarm(); return; }
+          if (e.target && e.target.closest && e.target.closest("[data-sound-toggle]")) return;
+          start();
+        }
+
+        function arm() {
+          if (armed || !enabled) return;
+          armed = true;
+          document.addEventListener("pointerdown", onGesture, true);
+          document.addEventListener("keydown", onGesture, true);
+        }
+
+        function disarm() {
+          if (!armed) return;
+          armed = false;
+          document.removeEventListener("pointerdown", onGesture, true);
+          document.removeEventListener("keydown", onGesture, true);
+        }
+
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            setEnabled(!enabled);
+          });
+        }
+
+        audio.addEventListener("play", paint);
+        audio.addEventListener("pause", paint);
+
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) {
+            if (!audio.paused) {
+              resumeAfterHidden = true;
+              audio.pause();
+            }
+          } else if (resumeAfterHidden) {
+            resumeAfterHidden = false;
+            if (enabled) start();
+          }
+        });
+
+        if (window.MutationObserver) {
+          new MutationObserver(paint).observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["lang"]
+          });
+        }
+
+        arm();
+        paint();
+      })();
     </script>
 
   </body>
