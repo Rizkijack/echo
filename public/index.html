@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Chakra+Petch:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -1347,6 +1347,693 @@
         #page-home .stats-note { padding: 18px 20px; }
         #page-home .price-card { padding: 24px 20px 26px; }
         #page-home .cta-final { padding: 30px 20px 28px; }
+      }
+
+      /* ============================================================
+         MAXIMALIST LAYER — "midnight city arcade"
+         ------------------------------------------------------------
+         Palet diambil langsung dari ilustrasi kota piksel di kartu
+         footer (langit #04060f→#0d1c38, jendela hangat #ffc26e,
+         jendela dingin #cfe4ff, lampu antena #ff8a70, rumput #2c6b31):
+         malam navy pekat + amber jendela + cyan es + merah beacon.
+         Bahasa bentuknya "pelat arcade": sudut keras, bracket sudut,
+         garis atas amber, glow tipis, label mono renggang — kontras
+         dengan latar 3D kota yang SENGAJA tidak disentuh.
+
+         Yang tidak diubah di layer ini: logo (brand-logo-img, footer
+         logo), banner (banner-img), kanvas kota 3D (#city3dCanvas,
+         .city3d-bg), dan scene kota footer (#footerCityCanvas,
+         .footer-city-bg). Semua teks tetap lewat i18n yang sama.
+         ============================================================ */
+      :root {
+        --bg: #05080f;
+        --scrim: rgba(4, 7, 13, 0.8);
+        --panel: rgba(7, 14, 27, 0.88);
+        --panel-solid: #08111f;
+        --panel-2: #0e1b30;
+        --line: rgba(140, 190, 255, 0.24);
+        --line-soft: rgba(140, 190, 255, 0.12);
+        --ink: #ffffff;
+        --ink-2: #d3e2f2;
+        --ink-3: #87a0ba;
+        --accent: #ffb65c;
+        --accent-deep: #ff8f3c;
+        --accent-ink: #180c01;
+        --accent-soft: rgba(255, 182, 92, 0.13);
+        --sage: #68e3a4;
+        --user-bubble: rgba(255, 182, 92, 0.12);
+        --danger: #ff7a66;
+        --radius-lg: 3px;
+        --radius-md: 2px;
+        --cyber-cyan: #96e6ff;
+        --cyber-amber: #ffb65c;
+        --cyber-red: #ff7a66;
+        --cyber-green: #68e3a4;
+        --cyber-void: #04060f;
+        --cyber-plate: #08111f;
+        --cyber-hair: rgba(255, 182, 92, 0.4);
+        --font-display: "Chakra Petch", "Plus Jakarta Sans", system-ui, sans-serif;
+      }
+
+      /* ---------- dasar: scrollbar, seleksi, fokus ---------- */
+      body { background: var(--bg); }
+      * { scrollbar-color: rgba(255, 182, 92, 0.4) rgba(5, 10, 20, 0.9); scrollbar-width: thin; }
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: #050a14; }
+      ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #24364f, #16243a); border: 1px solid #2c4566; }
+      ::-webkit-scrollbar-thumb:hover { background: var(--accent); border-color: var(--accent); }
+      :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* ---------- tipografi: display kotak + label mono ---------- */
+      #page-home .hero h1,
+      #page-home .home-section h2,
+      .cta-final h2,
+      .dash-head h1,
+      .docs-head h1,
+      .empty-state h2,
+      .dash-section > h2 {
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 0.005em;
+      }
+      #page-home .hero h1 {
+        font-size: clamp(42px, 7.6vw, 86px);
+        line-height: 0.94;
+        letter-spacing: -0.015em;
+        max-width: 18ch;
+        text-shadow:
+          0 2px 0 rgba(4, 6, 15, 0.9),
+          0 0 34px rgba(4, 6, 15, 0.85);
+      }
+      #page-home .hero h1 .hl {
+        text-shadow:
+          0 0 16px rgba(255, 182, 92, 0.55),
+          0 0 44px rgba(255, 143, 60, 0.32);
+      }
+      #page-home .home-section h2,
+      .cta-final h2 { letter-spacing: 0.02em; }
+      .dash-head h1, .docs-head h1, .empty-state h2 { letter-spacing: 0.03em; }
+      #page-home .sec-label {
+        color: var(--cyber-cyan);
+        letter-spacing: 0.34em;
+        border-bottom: 1px solid rgba(150, 230, 255, 0.22);
+        padding-bottom: 7px;
+        display: inline-block;
+      }
+      .model-label, .footer-col h4, .stat-card .stat-label, .placeholder-tag, .footer-email {
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      #page-home .stat-item .stat-num,
+      .price-value,
+      .stat-card .stat-value {
+        font-family: var(--font-mono);
+        letter-spacing: -0.02em;
+      }
+
+      /* ---------- tombol & kontrol: pelat keras ---------- */
+      .btn {
+        border-radius: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 12.5px;
+        padding: 13px 22px;
+        transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease;
+      }
+      .btn-primary {
+        background: linear-gradient(180deg, #ffca80 0%, #ffa851 100%);
+        color: var(--accent-ink);
+        border-color: rgba(255, 226, 178, 0.7);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 159, 74, 0.22);
+      }
+      .btn-primary:hover {
+        background: linear-gradient(180deg, #ffd99f 0%, #ffb267 100%);
+        color: var(--accent-ink);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 28px rgba(255, 159, 74, 0.45);
+      }
+      .btn-ghost {
+        background: rgba(8, 15, 28, 0.72);
+        border-color: rgba(140, 190, 255, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(4, 8, 16, 0.6);
+      }
+      .btn-ghost:hover {
+        border-color: var(--accent);
+        background: rgba(255, 182, 92, 0.08);
+        box-shadow: 0 0 22px rgba(255, 182, 92, 0.14);
+      }
+      .demo-badge {
+        border-radius: 2px;
+        border-color: rgba(255, 182, 92, 0.5);
+        background: rgba(6, 12, 24, 0.8);
+        letter-spacing: 0.2em;
+      }
+      .demo-badge::before {
+        box-shadow: 0 0 9px var(--accent), 0 0 2px #fff;
+        animation: echo-led 1.9s steps(2, end) infinite;
+      }
+      @keyframes echo-led { 0%, 62% { opacity: 1; } 63%, 100% { opacity: 0.25; } }
+
+      .lang-btn, .newchat-btn, .wallet-btn, .icon-btn, .hist-btn, .social-ph,
+      .model-select, .chip, .pay-select, .pay-input, .topup-opt, .toast {
+        border-radius: 2px;
+      }
+      .lang-btn {
+        background: rgba(6, 12, 24, 0.7);
+        border-color: rgba(140, 190, 255, 0.28);
+        font-family: var(--font-mono);
+        letter-spacing: 0.08em;
+      }
+      .lang-btn:hover { border-color: var(--accent); background: rgba(255, 182, 92, 0.08); }
+      .lang-menu, .wallet-menu {
+        border-radius: 2px;
+        border-color: rgba(255, 182, 92, 0.35);
+        background: #070f1e;
+        box-shadow: 0 22px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(4, 8, 16, 0.9) inset;
+      }
+      .lang-menu button:hover, .wallet-menu button:hover { background: rgba(255, 182, 92, 0.12); }
+
+      /* ---------- header home: pil jadi pelat HUD ---------- */
+      .home-header.scrolled .home-nav-inner {
+        background: rgba(5, 10, 20, 0.95);
+        border-color: rgba(255, 182, 92, 0.4);
+        border-radius: 3px;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.06),
+          0 18px 40px rgba(0, 0, 0, 0.6),
+          0 0 28px rgba(255, 182, 92, 0.1);
+      }
+      .pill-section { color: var(--cyber-cyan); letter-spacing: 0.28em; }
+      .brand-logo { border-radius: 10px; } /* frame logo: tetap, bukan diubah bentuknya */
+
+      /* ---------- hero: pelat terminal + garis status ---------- */
+      #page-home .hero-content {
+        border-top: 2px solid var(--accent);
+        background:
+          linear-gradient(180deg, rgba(255, 182, 92, 0.07), rgba(255, 182, 92, 0) 38%),
+          repeating-linear-gradient(0deg, rgba(140, 190, 255, 0.045) 0 1px, transparent 1px 4px),
+          rgba(5, 10, 21, 0.88);
+        box-shadow:
+          0 0 0 1px rgba(4, 8, 16, 0.85) inset,
+          0 24px 56px rgba(2, 4, 10, 0.6),
+          0 0 40px rgba(255, 182, 92, 0.08);
+      }
+      #page-home .hero-content::after {
+        content: "ECHO_OS // BEAM-1.0-501B // MIDNIGHT CITY";
+        display: block;
+        margin-top: 24px;
+        font-family: var(--font-mono);
+        font-size: 9.5px;
+        letter-spacing: 0.26em;
+        text-transform: uppercase;
+        color: rgba(150, 230, 255, 0.55);
+        text-shadow: none;
+      }
+      #page-home .scroll-hint { color: var(--cyber-cyan); letter-spacing: 0.24em; }
+
+      /* ---------- kartu home: bracket sudut + rail amber ---------- */
+      #page-home .hero-content,
+      #page-home .product-card,
+      #page-home .sec-intro,
+      #page-home .feature-list li,
+      #page-home .steps li,
+      #page-home .model-card,
+      #page-home .stat-item,
+      #page-home .stats-note,
+      #page-home .price-card,
+      #page-home .cta-final {
+        position: relative;
+        border-radius: 3px;
+        border: 1px solid rgba(140, 190, 255, 0.26);
+        border-top: 2px solid rgba(255, 182, 92, 0.75);
+        background:
+          linear-gradient(180deg, rgba(255, 182, 92, 0.045), rgba(255, 182, 92, 0) 30%),
+          repeating-linear-gradient(0deg, rgba(140, 190, 255, 0.035) 0 1px, transparent 1px 5px),
+          rgba(6, 12, 24, 0.88);
+        box-shadow:
+          inset 0 0 0 1px rgba(4, 8, 16, 0.55),
+          0 18px 44px rgba(2, 4, 10, 0.5);
+      }
+      #page-home .hero-content::before,
+      #page-home .product-card::before,
+      #page-home .sec-intro::before,
+      #page-home .feature-list li::before,
+      #page-home .steps li::before,
+      #page-home .model-card::before,
+      #page-home .stat-item::before,
+      #page-home .price-card::before,
+      #page-home .cta-final::before {
+        content: "";
+        position: absolute;
+        inset: 5px;
+        pointer-events: none;
+        opacity: 0.45;
+        background:
+          linear-gradient(var(--accent), var(--accent)) left top / 15px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) left top / 1px 15px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right top / 15px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right top / 1px 15px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) left bottom / 15px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) left bottom / 1px 15px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right bottom / 15px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right bottom / 1px 15px no-repeat;
+      }
+      #page-home .cta-final::after {
+        content: "";
+        position: absolute;
+        inset: 0 0 auto 0;
+        height: 7px;
+        background: repeating-linear-gradient(135deg, rgba(255, 182, 92, 0.55) 0 6px, rgba(4, 8, 16, 0) 6px 12px);
+        opacity: 0.6;
+        pointer-events: none;
+      }
+      #page-home .product-card .pc-icon,
+      #page-home .steps .num {
+        border: 1px solid rgba(255, 182, 92, 0.45);
+        background: rgba(255, 182, 92, 0.08);
+        box-shadow: 0 0 18px rgba(255, 182, 92, 0.12);
+      }
+      #page-home .product-card .pc-icon { border-radius: 2px; }
+      #page-home .steps .num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 10px;
+        color: var(--accent);
+      }
+      #page-home .feature-list .f-tag { color: var(--cyber-cyan); letter-spacing: 0.2em; }
+      #page-home .card-link { color: var(--accent); }
+      #page-home .model-tag {
+        color: var(--cyber-cyan);
+        border-color: rgba(150, 230, 255, 0.45);
+        border-radius: 2px;
+      }
+      #page-home .stat-item .stat-num { color: var(--accent); text-shadow: 0 0 24px rgba(255, 182, 92, 0.35); }
+      #page-home .price-value { color: var(--cyber-cyan); }
+      #page-home .price-card ul li::before { color: var(--accent); }
+      #page-home .sec-break .dline { border-top: 1px dashed rgba(255, 182, 92, 0.45); display: block; }
+      #page-home .sec-break svg { color: var(--accent); filter: drop-shadow(0 0 6px rgba(255, 182, 92, 0.5)); }
+
+      /* ---------- footer: pelat direktori (scene kota tetap) ---------- */
+      .site-footer {
+        border-radius: 6px;
+        border-color: rgba(140, 190, 255, 0.28);
+        background: linear-gradient(180deg, #070d19 0%, #050810 100%);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 182, 92, 0.18),
+          0 30px 64px rgba(0, 0, 0, 0.55);
+      }
+      .footer-col h4 { color: var(--cyber-cyan); letter-spacing: 0.22em; }
+      .footer-col a {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid transparent;
+        padding-bottom: 1px;
+      }
+      .footer-col a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+      .footer-bottom { border-top: 1px dashed rgba(255, 182, 92, 0.3); }
+      .footer-socials .social-ph:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 16px rgba(255, 182, 92, 0.2); }
+      .banner-figure img { border-radius: 4px; }
+
+      /* ---------- app: rail, topbar, panggung chat ---------- */
+      .app-shell, .dash-shell, .docs-shell { background: rgba(4, 8, 16, 0.62); }
+      .app-main, .dash-main, .docs-main {
+        background:
+          radial-gradient(ellipse 120% 60% at 50% 0%, rgba(20, 44, 78, 0.35), rgba(4, 8, 16, 0) 70%),
+          rgba(5, 9, 18, 0.82);
+      }
+      /* blueprint grid di panggung chat (UI saja, bukan latar kota home) */
+      .chat-scroll {
+        background-image:
+          linear-gradient(rgba(140, 190, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(140, 190, 255, 0.05) 1px, transparent 1px);
+        background-size: 48px 48px;
+        background-position: center top;
+      }
+      /* garis scan halus di app/dashboard/docs (tidak menyentuh home) */
+      #page-app .app-shell::after,
+      #page-dashboard .dash-shell::after,
+      #page-docs .docs-shell::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 44;
+        pointer-events: none;
+        background: repeating-linear-gradient(180deg, rgba(2, 5, 10, 0.22) 0 1px, rgba(2, 5, 10, 0) 1px 4px);
+        opacity: 0.5;
+      }
+      .rail {
+        width: 64px;
+        background: linear-gradient(180deg, #08101e 0%, #050a14 100%);
+        border-right: 1px solid rgba(255, 182, 92, 0.28);
+        box-shadow: inset -1px 0 0 rgba(4, 8, 16, 0.9);
+      }
+      .rail-btn {
+        border: 1px solid transparent;
+        color: var(--ink-3);
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+      .rail-btn:hover {
+        background: rgba(140, 190, 255, 0.08);
+        border-color: rgba(140, 190, 255, 0.25);
+        color: var(--ink);
+      }
+      .rail-btn.active {
+        background: rgba(255, 182, 92, 0.12);
+        border-color: rgba(255, 182, 92, 0.55);
+        color: var(--accent);
+        box-shadow: inset 0 0 18px rgba(255, 182, 92, 0.14);
+      }
+      .rail-btn.active::before {
+        content: "";
+        position: absolute;
+        left: -1px;
+        top: 8px;
+        bottom: 8px;
+        width: 2px;
+        background: var(--accent);
+        box-shadow: 0 0 10px var(--accent);
+      }
+      .rail-avatar { border-radius: 2px; border-color: rgba(150, 230, 255, 0.4); color: var(--cyber-cyan); }
+      .topbar {
+        background: linear-gradient(180deg, rgba(9, 17, 32, 0.95), rgba(5, 10, 20, 0.8));
+        border-bottom: 1px solid rgba(255, 182, 92, 0.28);
+        box-shadow: 0 10px 26px rgba(2, 4, 10, 0.45);
+      }
+      .topbar-title {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--cyber-cyan);
+      }
+      .model-fixed {
+        background-color: rgba(150, 230, 255, 0.07);
+        border-color: rgba(150, 230, 255, 0.28);
+        font-family: var(--font-mono);
+        font-size: 11.5px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .newchat-btn { box-shadow: 0 0 16px rgba(255, 182, 92, 0.25); }
+      .wallet-btn[data-state="connected"] { color: var(--cyber-green); border-color: rgba(104, 227, 164, 0.4); }
+
+      /* pesan */
+      .msg-user .bubble {
+        background: linear-gradient(180deg, rgba(255, 182, 92, 0.16), rgba(255, 143, 60, 0.07));
+        border: 1px solid rgba(255, 182, 92, 0.42);
+        border-radius: 3px 3px 0 3px;
+        box-shadow: 0 10px 26px rgba(2, 4, 10, 0.35);
+      }
+      .msg-assistant .avatar {
+        border-radius: 2px;
+        border-color: rgba(255, 182, 92, 0.5);
+        box-shadow: 0 0 16px rgba(255, 182, 92, 0.18);
+      }
+      .msg-body {
+        background: linear-gradient(180deg, rgba(9, 17, 32, 0.92), rgba(6, 12, 24, 0.92));
+        border: 1px solid rgba(140, 190, 255, 0.2);
+        border-left: 2px solid rgba(255, 182, 92, 0.8);
+        border-radius: 0 3px 3px 0;
+        box-shadow: 0 12px 30px rgba(2, 4, 10, 0.35);
+      }
+      .think-toggle {
+        font-size: 10.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        border-bottom: 1px dashed rgba(255, 182, 92, 0.5);
+      }
+      .think-body {
+        border-left: 2px solid rgba(255, 182, 92, 0.55);
+        background: rgba(255, 182, 92, 0.04);
+        padding: 10px 12px;
+        color: #a9bed4;
+      }
+      .model-label .dot { box-shadow: 0 0 8px var(--sage); }
+      .typing i { background: var(--accent); }
+
+      /* empty state + chips */
+      .empty-state .logo-mark { filter: drop-shadow(0 0 20px rgba(255, 182, 92, 0.4)); }
+      .chip {
+        background: rgba(8, 15, 28, 0.8);
+        border-color: rgba(140, 190, 255, 0.24);
+        box-shadow: inset 0 0 0 1px rgba(4, 8, 16, 0.5);
+      }
+      .chip:hover {
+        border-color: var(--accent);
+        background: rgba(255, 182, 92, 0.08);
+        box-shadow: 0 0 20px rgba(255, 182, 92, 0.14);
+      }
+      .chip span { color: var(--accent); }
+
+      /* composer: konsol */
+      .composer {
+        border-radius: 3px;
+        background: linear-gradient(180deg, rgba(10, 19, 35, 0.95), rgba(6, 12, 24, 0.95));
+        border: 1px solid rgba(140, 190, 255, 0.3);
+        border-left: 2px solid rgba(255, 182, 92, 0.75);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          0 18px 44px rgba(2, 4, 10, 0.5);
+      }
+      .composer:focus-within {
+        border-color: rgba(255, 182, 92, 0.6);
+        border-left-color: var(--accent);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.06),
+          0 0 0 1px rgba(255, 182, 92, 0.25),
+          0 0 32px rgba(255, 182, 92, 0.16),
+          0 18px 44px rgba(2, 4, 10, 0.5);
+      }
+      .composer textarea { text-align: left; }
+      .composer textarea::placeholder {
+        font-family: var(--font-mono);
+        font-size: 13.5px;
+        letter-spacing: 0.06em;
+      }
+      .send-btn {
+        border-radius: 2px;
+        box-shadow: 0 0 18px rgba(255, 182, 92, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      }
+      .send-btn:hover { box-shadow: 0 0 26px rgba(255, 182, 92, 0.55); }
+      .composer .model-select { border-color: rgba(150, 230, 255, 0.22); background-color: rgba(150, 230, 255, 0.06); }
+
+      /* history panel */
+      .history-panel {
+        background: #070f1e;
+        border-color: rgba(255, 182, 92, 0.35);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+      }
+      .history-head { border-bottom-color: rgba(255, 182, 92, 0.25); }
+      .hist-item { border-radius: 2px; }
+      .hist-item:hover { background: rgba(255, 182, 92, 0.08); border-color: rgba(255, 182, 92, 0.35); }
+      .hist-item .h-title { font-family: var(--font-ui); }
+      .hist-item .h-meta { letter-spacing: 0.06em; }
+      .hist-foot { font-family: var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
+
+      /* toast */
+      .toast {
+        background: #08111f;
+        border-color: rgba(255, 182, 92, 0.45);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(255, 182, 92, 0.14);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+      }
+
+      /* ---------- dashboard: papan monitor ---------- */
+      .dash-wrap { max-width: 1040px; }
+      .dash-head h1 { display: inline-block; border-bottom: 2px solid var(--accent); padding-bottom: 6px; }
+      .stat-grid { gap: 12px; }
+      .stat-card {
+        position: relative;
+        background:
+          linear-gradient(180deg, rgba(255, 182, 92, 0.06), rgba(255, 182, 92, 0) 42%),
+          repeating-linear-gradient(90deg, rgba(140, 190, 255, 0.06) 0 1px, transparent 1px 10px),
+          rgba(6, 12, 24, 0.88);
+        border: 1px solid rgba(140, 190, 255, 0.24);
+        border-top: 2px solid var(--accent);
+        border-radius: 3px;
+        padding: 20px 20px 30px;
+        text-align: left;
+        box-shadow: inset 0 0 0 1px rgba(4, 8, 16, 0.55), 0 18px 40px rgba(2, 4, 10, 0.45);
+      }
+      .stat-card .stat-label { justify-content: flex-start; color: var(--cyber-cyan); }
+      .stat-card .stat-value {
+        text-align: left;
+        font-size: clamp(30px, 3.6vw, 40px);
+        color: var(--accent);
+        text-shadow: 0 0 26px rgba(255, 182, 92, 0.3);
+      }
+      .stat-card .stat-value .unit { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+      .stat-card .stat-sub { text-align: left; }
+      .stat-card::after {
+        content: "";
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 12px;
+        height: 5px;
+        pointer-events: none;
+        background: repeating-linear-gradient(90deg, rgba(140, 190, 255, 0.4) 0 1px, transparent 1px 8px);
+        opacity: 0.5;
+      }
+      .stat-card::before,
+      .dash-card::before {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        pointer-events: none;
+        opacity: 0.35;
+        background:
+          linear-gradient(var(--accent), var(--accent)) left top / 12px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) left top / 1px 12px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right bottom / 12px 1px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) right bottom / 1px 12px no-repeat;
+      }
+      .dash-section > h2 { letter-spacing: 0.04em; }
+      .dash-section > p { color: var(--ink-2); }
+      .dash-card {
+        position: relative;
+        background:
+          linear-gradient(180deg, rgba(255, 182, 92, 0.05), rgba(255, 182, 92, 0) 30%),
+          rgba(6, 12, 24, 0.88);
+        border: 1px solid rgba(140, 190, 255, 0.24);
+        border-top: 2px solid rgba(255, 182, 92, 0.75);
+        border-radius: 3px;
+        box-shadow: inset 0 0 0 1px rgba(4, 8, 16, 0.5), 0 18px 40px rgba(2, 4, 10, 0.4);
+      }
+      .dash-card h3 {
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 16px;
+      }
+      .dash-card p { text-align: left; }
+      .topup-amounts { gap: 8px; }
+      .topup-opt {
+        background: rgba(8, 15, 28, 0.85);
+        border-color: rgba(140, 190, 255, 0.24);
+        font-family: var(--font-mono);
+        letter-spacing: 0.02em;
+        transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.2s ease;
+      }
+      .topup-opt small { letter-spacing: 0.04em; }
+      .topup-opt:hover { border-color: rgba(255, 182, 92, 0.6); }
+      .topup-opt.selected {
+        background: rgba(255, 182, 92, 0.12);
+        border-color: var(--accent);
+        color: var(--accent);
+        box-shadow: 0 0 22px rgba(255, 182, 92, 0.18), inset 0 0 0 1px rgba(255, 182, 92, 0.25);
+      }
+      .topup-opt.selected small { color: var(--ink-2); }
+      #wifInfo {
+        background: rgba(4, 8, 16, 0.75) !important;
+        border-color: rgba(150, 230, 255, 0.24) !important;
+        border-left: 2px solid rgba(150, 230, 255, 0.55) !important;
+        border-radius: 2px !important;
+      }
+      .kv-list .k {
+        font-family: var(--font-mono);
+        font-size: 10.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .kv-list .v { color: var(--ink-2); }
+      .api-key-box {
+        background: rgba(3, 8, 14, 0.9);
+        border: 1px dashed rgba(104, 227, 164, 0.45);
+        border-radius: 2px;
+      }
+      .api-key-box code { color: var(--cyber-green); }
+      .api-key-box code::after {
+        content: "▍";
+        margin-left: 2px;
+        color: var(--cyber-green);
+        animation: blink 1.1s steps(2, end) infinite;
+      }
+      .dash-actions .btn { letter-spacing: 0.08em; }
+      .placeholder-tag { border-color: rgba(255, 182, 92, 0.4); color: var(--accent); }
+      details > summary { color: var(--cyber-cyan); }
+
+      /* ---------- modal pembayaran ---------- */
+      .pay-card {
+        border-radius: 3px;
+        background: #070f1e;
+        border-color: rgba(255, 182, 92, 0.4);
+        box-shadow: 0 34px 80px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 182, 92, 0.08);
+      }
+      .pay-card h3 {
+        font-family: var(--font-display);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pay-instr {
+        background: rgba(4, 8, 16, 0.8);
+        border: 1px dashed rgba(150, 230, 255, 0.3);
+        border-radius: 2px;
+      }
+      .pay-instr .addr { color: var(--cyber-green); }
+      .pay-scrim { background: rgba(2, 4, 10, 0.78); }
+
+      /* ---------- docs: pelat artikel ---------- */
+      .docs-card {
+        background:
+          linear-gradient(180deg, rgba(255, 182, 92, 0.04), rgba(255, 182, 92, 0) 26%),
+          rgba(6, 12, 24, 0.9);
+        border: 1px solid rgba(140, 190, 255, 0.24);
+        border-top: 2px solid rgba(255, 182, 92, 0.7);
+        border-radius: 3px;
+        box-shadow: 0 18px 44px rgba(2, 4, 10, 0.45);
+      }
+      .docs-kicker { color: var(--cyber-cyan); letter-spacing: 0.24em; }
+      .docs-facts {
+        background: rgba(3, 8, 14, 0.9);
+        border: 1px dashed rgba(150, 230, 255, 0.28);
+        border-radius: 2px;
+      }
+      .docs-facts .k { letter-spacing: 0.1em; text-transform: uppercase; font-size: 12px; }
+      .docs-card code { color: var(--accent); background: rgba(255, 182, 92, 0.08); border-radius: 2px; }
+      .docs-card h2 { font-family: var(--font-display); letter-spacing: 0.02em; }
+
+      /* dashboard footer strip */
+      .home-footer { border-top: 1px dashed rgba(255, 182, 92, 0.3); letter-spacing: 0.04em; }
+
+      /* ---------- responsif: jaga pelat tetap terbaca ---------- */
+      @media (max-width: 900px) {
+        #page-home .hero h1 { font-size: clamp(38px, 9vw, 58px); }
+      }
+      @media (max-width: 640px) {
+        .rail { width: 52px; }
+        /* topbar sempit: sembunyikan chip model (label Beam tetap ada di
+           composer) supaya tombol chat + wallet tidak terpotong */
+        .topbar { gap: 6px; padding: 10px 10px; }
+        .topbar .model-fixed { display: none; }
+        .newchat-btn, .wallet-btn { letter-spacing: 0.04em; padding: 8px 10px; font-size: 11.5px; }
+        /* hero: tinggi mengikuti isi supaya kartu tidak memotong lede */
+        #page-home .hero-photo { height: auto; min-height: 52vh; padding: 26px 0 34px; overflow: visible; }
+        #page-home .hero-content::after { display: none; }
+        .stat-card { padding: 18px 16px 28px; }
+        .stat-card .stat-value { font-size: 30px; }
+        .stat-card::after { left: 16px; right: 16px; }
+        #page-home .hero-content::after { letter-spacing: 0.16em; font-size: 8.5px; }
+        .composer textarea::placeholder { font-size: 12.5px; }
+        .footer-col a { font-size: 13.5px; }
+      }
+
+      @media (max-width: 480px) {
+        .topbar .lang-btn .lang-code,
+        .topbar .lang-btn .lang-chev { display: none; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .demo-badge::before,
+        .api-key-box code::after { animation: none; }
       }
 
     </style>
