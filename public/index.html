@@ -5983,6 +5983,7 @@ model      beam</pre>
           .catch(function () { return cfg; });
       }
 
+      function unitsFor() { return BigInt(Math.round(pkg.usd * 1e6)); } // USDC/USDG, 6 decimals
       function updateInstr() {
         if (!cfg) return;
         var sel = chainSel();
