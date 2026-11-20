@@ -1213,7 +1213,64 @@ async function handleChat(request, env) {
   if (typeof msg.reasoning_content === "string" && msg.reasoning_content) {
     resp.reasoning_content = msg.reasoning_content;
   }
+  // B6: token usage dari provider (fallback estimasi karakter/4) —
+  // client tampilkan di meta message.
+  resp.usage = usageTokens;
   return jsonResponse(resp, 200);
+}
+
+// ---------- referral (B4) ----------
+// +5 credits referral per-wallet/ip baru yang sepakat link. Idempotent per user.
+const REFERRAL_BONUS_CREDITS = 5;
+const REFERRAL_CAP = 100;
+function referralCountKey() { return "ref:count"; }
+async function referralCodeFor(env, ownerKey) {
+  const rec = await env.CREDITS.get("ref:code:" + ownerKey, "json");
+  if (rec && rec.code) return rec.code;
+  const used = Number((await env.CREDITS.get(referralCountKey(), "json")) || 0) || 0;
+  if (used >= REFERRAL_CAP) return null;
+  const code = "ECHO" + Math.random().toString(36).slice(2, 7).toUpperCase();
+  try {
+    await env.CREDITS.put("ref:code:" + ownerKey, JSON.stringify({ code, at: Date.now() }), { expirationTtl: 90 * 86400 });
+    await env.CREDITS.put("ref:owner:" + code, ownerKey, { expirationTtl: 90 * 86400 });
+    await env.CREDITS.put(referralCountKey(), JSON.stringify(used + 1), { expirationTtl: 7 * 86400 });
+  } catch { /* best-effort */ }
+  return code;
+}
+async function handleReferralMe(request, env) {
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  if (rateLimited(ip)) return jsonResponse({ error: "Too many requests, try again shortly" }, 429);
+  if (!env.CREDITS) return jsonResponse({ error: "Storage not configured" }, 503);
+  const key = await userIdentity(request);
+  const code = await referralCodeFor(env, key);
+  return jsonResponse({ code, key, cap: REFERRAL_CAP }, 200);
+}
+async function handleReferral(request, env) {
+  const url = new URL(request.url);
+  const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+  if (rateLimited(ip)) return jsonResponse({ error: "Too many requests, try again shortly" }, 429);
+  if (!env.CREDITS) return jsonResponse({ error: "Storage not configured" }, 503);
+  const key = await userIdentity(request);
+  const m = url.pathname.match(/^\/api\/refer\/([A-Za-z0-9-]+)$/);
+  const code = m && m[1];
+  const claim = url.searchParams.get("claim") === "1";
+  if (!code) return jsonResponse({ error: "Invalid referral code" }, 400);
+  const owner = await env.CREDITS.get("ref:owner:" + code);
+  if (!owner) return jsonResponse({ error: "Invalid referral code" }, 400);
+  if (!claim) {
+    return jsonResponse({ code, owner, claimUrl: url.origin + "/#/refer?code=" + code }, 200);
+  }
+  if (key === owner) {
+    return jsonResponse({ error: "You cannot claim your own referral code", code: "self_claim" }, 409);
+  }
+  const claimed = await env.CREDITS.get("ref:claimed:" + key);
+  if (!claimed) {
+    if (owner.indexOf("w:") === 0) {
+      await grantBonus(env, owner.slice(2), REFERRAL_BONUS_CREDITS * TOKENS_PER_CREDIT);
+    }
+    await env.CREDITS.put("ref:claimed:" + key, "1");
+  }
+  return jsonResponse({ code, owner, claimed: true, credited: owner.indexOf("w:") === 0 }, 200);
 }
 
 export default {
@@ -1224,6 +1281,12 @@ export default {
     }
     if (url.pathname === "/api/credits") {
       return handleCredits(request, env);
+    }
+    if (url.pathname === "/api/refer/me") {
+      return handleReferralMe(request, env);
+    }
+    if (url.pathname.match(/^\/api\/refer\/[A-Za-z0-9-]+$/)) {
+      return handleReferral(request, env);
     }
     if (url.pathname === "/api/topup/config" && request.method === "GET") {
       return handleTopupConfig(request, env);
