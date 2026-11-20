@@ -38,14 +38,6 @@ const TOPUP_CHAINS = {
     rpc: "https://rpc.mainnet.chain.robinhood.com/",
     tokens: {
       usdg: { name: "USDG", decimals: 6, contract: "0x5fc5360d0400a0fd4f2af552add042d716f1d168" },
-      // $WIF (World is Flat) — fee-token Echo. Credit = nilai USD pasar
-      // (CoinGecko) ÷ USD_PER_CREDIT — paritas 1:1 dengan USDC/USDG.
-      wif: {
-        name: "$WIF",
-        decimals: 18,
-        contract: "0x5173b8ea6923c2d40267890d45c46a3480954773",
-        price_feed: { coingecko_id: "world-is-flat" },
-      },
     },
   },
 };
@@ -78,32 +70,6 @@ async function tbSendEvent(env, name, row) {
 }
 
 
-// ---------- $WIF holding tier (unlock kuota harian) ----------
-// Holder ≥ WIF_HOLD_MIN di wallet yang tersambung → +TIER_DAILY bonus
-// credits/hari (limit harian lebih besar, bukan bonus purchased). Cek
-// balanceOf via public RPC, cache 24h (sesuai ritme reset harian).
-const WIF_HOLD_MIN = 10000;
-const TIER_DAILY_BONUS = 8 * TOKENS_PER_CREDIT; // +8 credit/hari
-const TIER_CHECK_TTL_MS = 24 * 60 * 60 * 1000;
-
-function tierKey(wallet) {
-  return "tier:" + wallet;
-}
-async function readTier(env, wallet) {
-  if (!env.CREDITS || !wallet) return { holder: false, bonusTokens: 0, enforced: false, stale: true };
-  let rec;
-  try {
-    rec = await env.CREDITS.get(tierKey(wallet), "json");
-  } catch {
-    rec = null;
-  }
-  const at = rec && Number(rec.at) > 0 ? Number(rec.at) : 0;
-  if (at > 0 && Date.now() - at < TIER_CHECK_TTL_MS) {
-    const holder = !!rec.holder;
-    return { holder, bonusTokens: holder ? TIER_DAILY_BONUS : 0, enforced: true, stale: false };
-  }
-  return { holder: false, bonusTokens: 0, enforced: true, stale: true };
-}
 // RPC Robinhood: publik rate-limits CF egress (429) — Alchemy (resmi,
 // docs.robinhood.com/chain/connecting) dipakai sbg primary jika secret
 // ALCHEMY_ROBINHOOD_RPC di-set, publik sbg fallback.
@@ -130,136 +96,7 @@ async function rpcRetry(rpc, method, params, attempts) {
   }
   return last;
 }
-async function refreshTier(env, wallet) {
-  const wif = TOPUP_CHAINS.robinhood.tokens.wif;
-  const data =
-    "0x70a08231" + wallet.toLowerCase().replace(/^0x/, "").padStart(64, "0"); // balanceOf(address)
-  const res = await rpcMulti(env, "eth_call", [{ to: wif.contract, data }, "latest"]);
-  if (!res.result) return null; // RPC gagal semua: pertahankan cache lama / default
-  const raw = hexToNumberSafe(res.result);
-  const balance = raw === null ? 0 : Number(raw) / Math.pow(10, wif.decimals);
-  const holder = balance >= WIF_HOLD_MIN;
-  // snapshot tier → analytics (juga bekerja saat holder=false)
-  await tbSendEvent(env, "tier_events", {
-    timestamp: new Date().toISOString(),
-    wallet,
-    holder,
-    wif_balance: Math.round(balance),
-  });
-  try {
-    await env.CREDITS.put(tierKey(wallet), JSON.stringify({ holder, at: Date.now() }), {
-      expirationTtl: 2 * 24 * 60 * 60,
-    });
-  } catch {
-    // best-effort
-  }
-  return { holder, bonusTokens: holder ? TIER_DAILY_BONUS : 0, enforced: true, stale: false };
-}
-// Cache expired → refresh (1 RPC/user/hari); RPC gagal → fallback no-tier.
-async function getTier(env, wallet) {
-  const t = await readTier(env, wallet);
-  if (!t.enforced || !t.stale || !wallet || !env.CREDITS) return t;
-  const fresh = await refreshTier(env, wallet);
-  return fresh || t;
-}
 
-// ---------- harga $WIF (cache 60s per isolate) ----------
-// Oracle order (user, 2026-11-03):
-//  1. Alchemy Prices API (by-ADDRESS — by-symbol salah token: "WIF" juga
-//     dogwifhat di Solana, $0.17 vs $0.0015), key dari secret Alchemy RPC.
-//  2. CoinGecko id world-is-flat (kadang diblok egress CF).
-//  3. DexScreener pair max-liquidity (fallback yang terbukti jalan).
-// Feed down semua → null → verifikasi harga skip (retry).
-const WIF_PRICE_TTL_MS = 60 * 1000;
-const wifPriceCache = { usd: 0, at: 0 };
-let wifPricePending = null;
-const WIF_DS_URL = "https://api.dexscreener.com/latest/dex/tokens/0x5173b8ea6923c2d40267890d45c46a3480954773";
-
-function alchemyKey(env) {
-  const u = env && env.ALCHEMY_ROBINHOOD_RPC;
-  if (!u) return null;
-  const m = String(u).match(/\/v2\/([A-Za-z0-9_-]+)/);
-  return m ? m[1] : null;
-}
-
-async function fetchWifPrice(env) {
-  const key = alchemyKey(env);
-  if (key) {
-    try {
-      const r = await fetch("https://api.g.alchemy.com/prices/v1/" + key + "/tokens/by-address", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          networks: ["robinhood-mainnet"],
-          addresses: [{ address: "0x5173b8ea6923c2d40267890d45c46a3480954773", network: "robinhood-mainnet" }],
-        }),
-      });
-      if (r.ok) {
-        const j = await r.json();
-        const v = j && j.data && j.data[0] && j.data[0].prices && j.data[0].prices[0] && Number(j.data[0].prices[0].value);
-        if (v > 0) return v;
-      }
-    } catch {
-      // lanjut ke rival berikutnya
-    }
-  }
-  try {
-    const r2 = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=world-is-flat&vs_currencies=usd"
-    );
-    if (r2.ok) {
-      const j2 = await r2.json();
-      const p2 = j2 && j2["world-is-flat"] && Number(j2["world-is-flat"].usd);
-      if (p2 > 0) return p2;
-    }
-  } catch {
-    // lanjut ke fallback
-  }
-  try {
-    const r3 = await fetch(WIF_DS_URL);
-    if (r3.ok) {
-      const j3 = await r3.json();
-      let best = null;
-      for (const p of (j3 && j3.pairs) || []) {
-        const liq = (p && p.liquidity && Number(p.liquidity.usd)) || 0;
-        const price = (p && p.priceUsd && Number(p.priceUsd)) || 0;
-        if (price > 0 && liq > 0 && (!best || liq > best.liq)) best = { price, liq };
-      }
-      if (best) return best.price;
-    }
-  } catch {
-    // feed mati semua
-  }
-  return null;
-}
-
-async function wifPriceUsd(env) {
-  const now = Date.now();
-  if (wifPriceCache.usd > 0 && now - wifPriceCache.at < WIF_PRICE_TTL_MS) {
-    return wifPriceCache.usd;
-  }
-  if (wifPricePending) return wifPricePending;
-  wifPricePending = (async () => {
-    try {
-      let p = await fetchWifPrice(env);
-      if (!p) {
-        // cold-start transient: satu retry sebelum menyerah (kegagalan tidak
-        // di-cache, jadi request berikutnya mencoba lagi otomatis)
-        await new Promise((r) => setTimeout(r, 500));
-        p = await fetchWifPrice(env);
-      }
-      if (p > 0) {
-        wifPriceCache.usd = p;
-        wifPriceCache.at = Date.now();
-      }
-    } catch {
-      // biarkan stale / null
-    }
-    wifPricePending = null;
-    return wifPriceCache.usd > 0 ? wifPriceCache.usd : null;
-  })();
-  return wifPricePending;
-}
 const TOPUP_PACKAGES = [
   { credits: 50, usd: 5 },
   { credits: 100, usd: 10 },
@@ -420,7 +257,6 @@ async function handleCredits(request, env) {
   const id = await userIdentity(request);
   const usage = await readUsage(env, id);
   const wallet = walletIdentity(request);
-  const tierRec = wallet ? await getTier(env, wallet) : { holder: false, bonusTokens: 0, enforced: false };
   const bonusRec = wallet ? await readBonus(env, wallet) : { bonus: 0, enforced: false };
   const bonus = bonusRec.bonus;
   return jsonResponse(
@@ -432,11 +268,9 @@ async function handleCredits(request, env) {
       tokens_used: usage.tokens,
       chats: usage.chats,
       credits_used: usage.tokens / TOKENS_PER_CREDIT,
-      wif_holder: tierRec.holder,
-      tier_bonus_credits: tierRec.bonusTokens / TOKENS_PER_CREDIT,
       bonus_credits: bonus / TOKENS_PER_CREDIT,
       bonus_tokens: bonus,
-      effective_limit: (DAILY_CREDIT_LIMIT + tierRec.bonusTokens + bonus) / TOKENS_PER_CREDIT,
+      effective_limit: (DAILY_CREDIT_LIMIT + bonus) / TOKENS_PER_CREDIT,
       enforced: usage.enforced,
     },
     200
@@ -536,16 +370,9 @@ async function handleStats(request, env) {
 // ---------- top-up crypto ----------
 async function handleTopupConfig(request, env) {
   if (!env.CREDITS) return jsonResponse({ error: "Storage not configured" }, 503);
-  const wifPrice = await wifPriceUsd(env);
   const chains = {
     base: TOPUP_CHAINS.base,
-    robinhood: {
-      ...TOPUP_CHAINS.robinhood,
-      tokens: {
-        usdg: TOPUP_CHAINS.robinhood.tokens.usdg,
-        wif: { ...TOPUP_CHAINS.robinhood.tokens.wif, price_usd: wifPrice },
-      },
-    },
+    robinhood: TOPUP_CHAINS.robinhood,
   };
   return jsonResponse(
     {
@@ -671,19 +498,7 @@ async function handleTopupVerify(request, env) {
   if (units === null || units <= 0n) {
     return jsonResponse({ error: "No transfer amount found", code: "no_amount" }, 400);
   }
-  let usd = Number(units) / Math.pow(10, token.decimals);
-  // Token non-stablecoin ($WIF): nilai = jumlah token × harga pasar at-the-
-  // moment. Feed down → tolak dengan retry (bukan salah-amount-claim).
-  if (token.price_feed) {
-    const price = await wifPriceUsd(env);
-    if (!price) {
-      return jsonResponse(
-        { error: "Price feed unavailable, retry verification shortly", code: "price_unavailable" },
-        503
-      );
-    }
-    usd = (Number(units) / Math.pow(10, token.decimals)) * price;
-  }
+  const usd = Number(units) / Math.pow(10, token.decimals);
   if (usd < MIN_PURCHASE_USD) {
     return jsonResponse(
       { error: `Minimum purchase is $${MIN_PURCHASE_USD.toFixed(2)}`, code: "too_small", usd },
@@ -703,13 +518,6 @@ async function handleTopupVerify(request, env) {
     tokens_granted: tokensGranted,
     tx_marker: marker,
   });
-  // Tier holding di-refresh pasca-grant: pembayaran $WIF memberi unlock instan
-  // (dan pembayaran token lain memberi pengecekan $WIF gratis).
-  try {
-    await refreshTier(env, claimWallet);
-  } catch {
-    // best-effort
-  }
   await env.CREDITS.put(
     marker,
     JSON.stringify({ wallet: claimWallet, credits, tokensGranted, at: Date.now() }),
@@ -941,7 +749,7 @@ async function handleV1Models() {
 }
 
 // Pembukuan bersama untuk /v1 (JSON & SSE): usage harian, stats global,
-// last_used key, dan burn bonus untuk overflow di atas free daily + tier.
+// last_used key, dan burn bonus untuk overflow di atas kuota gratis harian.
 async function billV1Usage(env, uid, wallet, apiKey, prevUsage, usageTokens, freeDaily) {
   await addUsage(env, uid, usageTokens);
   await bumpGlobalStats(env, usageTokens);
@@ -988,9 +796,8 @@ async function handleV1Chat(request, env, ctx) {
   const wallet = auth.wallet;
   const uid = "w:" + wallet;
   const prevUsage = await readUsage(env, uid);
-  const tierRec = await getTier(env, wallet);
   const bonusRec = await readBonus(env, wallet);
-  const freeDaily = DAILY_CREDIT_LIMIT + tierRec.bonusTokens;
+  const freeDaily = DAILY_CREDIT_LIMIT;
   const totalLimit = freeDaily + bonusRec.bonus;
   if (prevUsage.enforced && prevUsage.tokens >= totalLimit) {
     return openAIError("Credit balance exhausted. Top up with crypto on the dashboard.", 402);
@@ -1123,11 +930,8 @@ async function handleChat(request, env) {
   const uid = await userIdentity(request);
   const prevUsage = await readUsage(env, uid);
   const wallet = walletIdentity(request);
-  const tierRec = wallet ? await getTier(env, wallet) : { holder: false, bonusTokens: 0, enforced: false };
   const bonusRec = wallet ? await readBonus(env, wallet) : { bonus: 0, enforced: false };
-  // Free daily = kuota gratis harian + tier $WIF (limit lebih besar, bukan
-  // bonus purchased); bonus dipotong atas overflow setelah free daily+tier.
-  const freeDaily = DAILY_CREDIT_LIMIT + tierRec.bonusTokens;
+  const freeDaily = DAILY_CREDIT_LIMIT;
   const totalLimit = freeDaily + bonusRec.bonus;
   if (prevUsage.enforced && prevUsage.tokens >= totalLimit) {
     const withWallet = !!wallet;

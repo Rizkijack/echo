@@ -2,7 +2,7 @@
 
 > **Echo is an AI chat that lives inside a midnight city.** The city is drawn procedurally, building by building, and the camera only moves when you scroll — the place waits for you instead of performing for you. You talk to **Beam**, Reflection's open **501B** model, in one continuous conversation, and its thinking stays visible in **collapsible blocks**, so you can check the reasoning instead of taking the answer on faith.
 >
-> Every day starts with **2 free credits**. If you need more, you top up with **USDC on Base** or **USDG/$WIF on Robinhood Chain**, verified on-chain, no middleman. **Six languages, one model, one conversation.** Echo is a quiet room with a view: the city outside, the answer in front of you.
+> Every day starts with **2 free credits**. If you need more, you top up with **USDC on Base** or **USDG on Robinhood Chain**, verified on-chain, no middleman. **Six languages, one model, one conversation.** Echo is a quiet room with a view: the city outside, the answer in front of you.
 
 AI chat frontend (single-file `public/index.html`, no build step) + Cloudflare
 Worker proxy to Reflection Beam.
@@ -43,27 +43,6 @@ Reflection Beam (model Beam-1.0-501B-A23B). Env: `REFLECTION_API_KEY`
 in the environment when running, or put it in a `.env` file in the
 repo root — server.js loads it (simple KEY=VALUE parser, no
 dependency; pre-set environment wins). Never commit a real key.
-
-## $WIF payments & holding tier
-
-`$WIF` (World is Flat, ERC-20 on Robinhood Chain, contract
-`0x5173b8ea6923c2d40267890d45c46a3480954773`) is a third payment option
-next to USDC/USDG:
-
-- Credits are granted at the token's live market rate (CoinGecko,
-  60s cache): $1 of $WIF = $1 of credits, 1:1 parity with the stablecoins.
-  Payments are verified with the same ERC-20 `Transfer`-log check to the
-  treasury; the transaction marker TTL is 30 days like the other tokens.
-- **Holding tier**: keeping ≥ 10,000 $WIF in the connected wallet raises
-  the free daily allowance from 2 to 10 credits/day while the tokens
-  stay held. The balance is checked via `balanceOf` on the official
-  Alchemy endpoint (Worker secret `ALCHEMY_ROBINHOOD_RPC`; the public
-  RPC is the fallback — it rate-limits Workers egress) and cached for
-  24h (`tier:<wallet>` KV), re-checked after every top-up.
-  Burn order: free daily (+tier) first, then purchased bonus credits.
-
-$WIF is optional — the free daily credits and USDC/USDG top-ups stay
-available to everyone.
 
 ## Public API (OpenAI-compatible)
 
